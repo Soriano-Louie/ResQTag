@@ -133,22 +133,22 @@ export default function QRCard({ qr, onQRUpdated }) {
       </div>
 
       {/* QR Canvas & Profile Link Area */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+      <div className="flex flex-col lg:flex-row gap-6 items-stretch">
         {/* QR Preview Box */}
-        <div className="md:col-span-5 flex flex-col items-center justify-center p-5 bg-slate-50 rounded-2xl border border-slate-200">
-          <div className="bg-white p-4 rounded-xl shadow-md border border-slate-100 flex flex-col items-center">
+        <div className="shrink-0 flex flex-col items-center justify-center p-5 bg-slate-50 rounded-2xl border border-slate-200 lg:w-56">
+          <div className="bg-white p-4 rounded-xl shadow-md border border-slate-100 flex flex-col items-center w-full">
             <QRCodeCanvas
               id="resqtag-qr-canvas"
               value={emergencyUrl}
-              size={180}
+              size={160}
               level="H"
               includeMargin={true}
               imageSettings={{
                 src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e11d48'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>",
                 x: undefined,
                 y: undefined,
-                height: 36,
-                width: 36,
+                height: 32,
+                width: 32,
                 excavate: true,
               }}
             />
@@ -156,7 +156,7 @@ export default function QRCard({ qr, onQRUpdated }) {
               Scan For Emergency
             </span>
           </div>
-          
+
           <div className="mt-3 text-center">
             <span className="text-xs text-slate-500">
               Total Scans: <strong className="text-slate-800">{qr.scan_count || 0}</strong>
@@ -170,7 +170,7 @@ export default function QRCard({ qr, onQRUpdated }) {
         </div>
 
         {/* Action Controls */}
-        <div className="md:col-span-7 space-y-4">
+        <div className="flex-1 min-w-0 space-y-4">
           <div>
             <label className="text-xs font-semibold uppercase text-slate-500 tracking-wider block mb-1.5">
               Emergency Profile Link
