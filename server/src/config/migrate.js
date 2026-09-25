@@ -96,11 +96,20 @@ export async function runMigrations() {
     if (adminCheck.length === 0) {
       const defaultAdminPass = 'Admin@123456';
       const hash = await bcrypt.hash(defaultAdminPass, 12);
-      await connection.query(
+      const [insertResult] = await connection.query(
         `INSERT INTO users (first_name, last_name, email, password_hash, role, account_status)
          VALUES (?, ?, ?, ?, ?, ?)`,
         ['System', 'Admin', 'admin@resqtag.com', hash, 'admin', 'active']
       );
+      const adminId = insertResult.insertId;
+
+      // Seed admin profile
+      await connection.query('INSERT IGNORE INTO emergency_profiles (user_id) VALUES (?)', [adminId]);
+
+      // Seed admin QR tag
+      const adminQrToken = 'admin8f92a71c4d9e984b2361093a8901';
+      await connection.query('INSERT IGNORE INTO qr_tags (user_id, qr_token, status) VALUES (?, ?, "active")', [adminId, adminQrToken]);
+
       console.log('👤 Created default admin account: admin@resqtag.com / Admin@123456');
     }
 

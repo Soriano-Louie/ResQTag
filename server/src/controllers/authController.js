@@ -185,11 +185,32 @@ export async function getMe(req, res) {
 
     const user = userRows[0];
 
-    // Also get user's QR tag
-    const [qrRows] = await pool.query(
+    // Ensure user's QR tag exists
+    let [qrRows] = await pool.query(
       'SELECT qr_token, status, scan_count, last_scanned_at FROM qr_tags WHERE user_id = ?',
       [req.user.user_id]
     );
+
+    if (qrRows.length === 0) {
+      const newToken = generateSecureQRToken();
+      await pool.query(
+        'INSERT INTO qr_tags (user_id, qr_token, status) VALUES (?, ?, "active")',
+        [req.user.user_id, newToken]
+      );
+      qrRows = [{ qr_token: newToken, status: 'active', scan_count: 0, last_scanned_at: null }];
+    }
+
+    // Ensure emergency profile exists
+    const [profileRows] = await pool.query(
+      'SELECT profile_id FROM emergency_profiles WHERE user_id = ?',
+      [req.user.user_id]
+    );
+    if (profileRows.length === 0) {
+      await pool.query(
+        'INSERT INTO emergency_profiles (user_id) VALUES (?)',
+        [req.user.user_id]
+      );
+    }
 
     return res.json({
       user: {
@@ -202,7 +223,7 @@ export async function getMe(req, res) {
         accountStatus: user.account_status,
         createdAt: user.created_at
       },
-      qr: qrRows[0] || null
+      qr: qrRows[0]
     });
   } catch (error) {
     console.error('getMe error:', error);

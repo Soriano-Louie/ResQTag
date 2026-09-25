@@ -23,7 +23,25 @@ export default function QRCard({ qr, onQRUpdated }) {
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
 
-  if (!qr) return null;
+  if (!qr) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 flex flex-col items-center justify-center min-h-[350px] space-y-4 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center animate-pulse">
+          <QrCode className="w-7 h-7" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="font-bold text-slate-900">Setting up your ResQTag</h3>
+          <p className="text-xs text-slate-500 max-w-xs">Initializing your secure emergency QR code...</p>
+        </div>
+        <button
+          onClick={onQRUpdated}
+          className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl shadow transition-all"
+        >
+          Initialize QR Code
+        </button>
+      </div>
+    );
+  }
 
   const origin = window.location.origin;
   const emergencyUrl = `${origin}/emergency/${qr.qr_token}`;

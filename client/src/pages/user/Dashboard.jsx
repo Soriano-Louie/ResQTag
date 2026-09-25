@@ -19,7 +19,8 @@ import {
   QrCode,
   ArrowUpRight,
   ExternalLink,
-  Phone
+  Phone,
+  Loader2
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -32,13 +33,15 @@ export default function Dashboard() {
     try {
       setLoading(true);
       const [profileData, contactData, qrData] = await Promise.all([
-        profileService.getProfile(),
-        contactService.getContacts(),
-        qrService.getQR()
+        profileService.getProfile().catch(() => null),
+        contactService.getContacts().catch(() => ({ contacts: [] })),
+        qrService.getQR().catch(() => null)
       ]);
       setProfile(profileData);
-      setContacts(contactData.contacts || []);
-      setQr(qrData.qr);
+      setContacts(contactData?.contacts || []);
+      if (qrData?.qr) {
+        setQr(qrData.qr);
+      }
     } catch (err) {
       console.error('Error loading dashboard data:', err);
     } finally {
@@ -49,6 +52,15 @@ export default function Dashboard() {
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  if (loading && !profile) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <Loader2 className="w-10 h-10 text-brand-600 animate-spin" />
+        <p className="text-sm font-medium text-slate-500">Loading your emergency dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
