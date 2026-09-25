@@ -7,6 +7,7 @@ const RELATIONSHIPS = [
   'Parent',
   'Guardian',
   'Spouse',
+  'Partner',
   'Sibling',
   'Relative',
   'Friend',
