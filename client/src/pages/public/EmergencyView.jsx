@@ -322,7 +322,7 @@ export default function EmergencyView() {
                   <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">Date of Birth</span>
-                    <span className="font-bold text-slate-800">{data.date_of_birth}</span>
+                    <span className="font-bold text-slate-800">{new Date(data.date_of_birth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                   </div>
                 </div>
               )}
