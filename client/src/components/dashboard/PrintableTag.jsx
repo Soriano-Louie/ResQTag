@@ -31,7 +31,6 @@ export default function PrintableTag({ qr, user }) {
 
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600">Scan for Medical Info</p>
-            <p className="text-[8px] text-gray-500 font-mono mt-0.5">{qr.qr_token.slice(0, 12)}</p>
           </div>
         </div>
 
@@ -55,9 +54,8 @@ export default function PrintableTag({ qr, user }) {
             </div>
           </div>
 
-          <div className="border-t pt-2 text-[9px] text-gray-500 flex justify-between items-center">
+          <div className="border-t pt-2 text-[9px] text-gray-500">
             <span>resqtag.com</span>
-            <span className="font-mono">{qr.qr_token.slice(0, 10)}</span>
           </div>
         </div>
       </div>

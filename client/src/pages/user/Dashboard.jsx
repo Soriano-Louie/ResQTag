@@ -64,11 +64,8 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Printable Tag (Visible only when user clicks Print) */}
-      <PrintableTag qr={qr} user={user} />
-
       {/* Welcome Banner */}
-      <div className="no-print flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-700/80">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-700/80">
         <div className="space-y-1">
           <span className="text-xs uppercase font-bold tracking-wider text-brand-400">
             Emergency Management Console
@@ -77,7 +74,7 @@ export default function Dashboard() {
             Welcome, {user?.firstName}!
           </h1>
           <p className="text-xs sm:text-sm text-slate-300">
-            Your emergency profile is configured and ready for physical tag generation.
+            Your emergency profile is configured and ready for physical tag fulfillment.
           </p>
         </div>
 
@@ -94,17 +91,17 @@ export default function Dashboard() {
             className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md shadow-brand-600/30 transition-all"
           >
             <QrCode className="w-3.5 h-3.5" />
-            Print Keychain Tag
+            Order Physical Tag
           </Link>
         </div>
       </div>
 
       {/* Main Grid: QR Tag Card + Overview Sections */}
-      <div className="no-print grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* Left Column: QR Card */}
         <div className="lg:col-span-5 space-y-6">
-          <QRCard qr={qr} onQRUpdated={loadDashboardData} />
+          <QRCard qr={qr} user={user} onQRUpdated={loadDashboardData} />
         </div>
 
         {/* Right Column: Profile Summary Cards */}

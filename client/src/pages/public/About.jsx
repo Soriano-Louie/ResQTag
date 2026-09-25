@@ -93,7 +93,7 @@ export default function About() {
       <div className="bg-gradient-to-r from-brand-600 to-rose-600 rounded-2xl p-8 text-white text-center space-y-4 shadow-lg">
         <h3 className="text-2xl font-bold">Ready to create your ResQTag?</h3>
         <p className="text-brand-100 text-sm max-w-md mx-auto">
-          It takes less than 2 minutes to register, set your emergency contacts, and generate your printable QR keychain tag.
+          It takes less than 2 minutes to register, configure your emergency profile, and request your official physical ResQTag kit.
         </p>
         <div className="pt-2">
           <Link

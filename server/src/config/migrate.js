@@ -91,6 +91,25 @@ export async function runMigrations() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    // 6. Tag orders table (Physical tag print requests)
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS tag_orders (
+        order_id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        recipient_name VARCHAR(100) NOT NULL,
+        contact_number VARCHAR(30) NOT NULL,
+        shipping_address TEXT NOT NULL,
+        quantity INT DEFAULT 1,
+        order_status ENUM('pending', 'processing', 'printed', 'delivered', 'cancelled') DEFAULT 'pending',
+        notes TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        INDEX idx_order_user (user_id),
+        INDEX idx_order_status (order_status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
     // Seed default admin if none exists
     const [adminCheck] = await connection.query('SELECT user_id FROM users WHERE role = ? LIMIT 1', ['admin']);
     if (adminCheck.length === 0) {

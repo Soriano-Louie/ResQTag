@@ -2,33 +2,86 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { qrService } from '../../services/qrService';
+import { tagOrderService } from '../../services/tagOrderService';
 import QRCard from '../../components/dashboard/QRCard';
-import PrintableTag from '../../components/dashboard/PrintableTag';
-import { QrCode, ArrowLeft, Printer, ShieldCheck, Tag, Info, AlertTriangle, Key } from 'lucide-react';
+import { 
+  ShieldCheck, 
+  ArrowLeft, 
+  Package, 
+  Clock, 
+  Sparkles, 
+  CheckCircle2, 
+  Truck, 
+  Info,
+  Calendar,
+  MapPin,
+  Loader2
+} from 'lucide-react';
 
 export default function QRPage() {
   const { user, qr, setQr } = useAuth();
   const navigate = useNavigate();
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
 
-  const loadQR = async () => {
+  const loadData = async () => {
     try {
-      const res = await qrService.getQR();
-      setQr(res.qr);
+      const [qrRes, ordersRes] = await Promise.all([
+        qrService.getQR().catch(() => null),
+        tagOrderService.getMyOrders().catch(() => ({ orders: [] }))
+      ]);
+      if (qrRes?.qr) setQr(qrRes.qr);
+      setOrders(ordersRes?.orders || []);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoadingOrders(false);
     }
   };
 
   useEffect(() => {
-    loadQR();
+    loadData();
   }, []);
 
-  return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-      {/* Printable Sheet (Triggered on Window Print) */}
-      <PrintableTag qr={qr} user={user} />
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'pending':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">
+            <Clock className="w-3.5 h-3.5 text-amber-600" /> Pending Review
+          </span>
+        );
+      case 'processing':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase bg-sky-100 text-sky-800 border border-sky-200">
+            <Sparkles className="w-3.5 h-3.5 text-sky-600" /> In Production
+          </span>
+        );
+      case 'printed':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase bg-purple-100 text-purple-800 border border-purple-200">
+            <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" /> Tag Printed
+          </span>
+        );
+      case 'delivered':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <Truck className="w-3.5 h-3.5 text-emerald-600" /> Delivered
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase bg-slate-100 text-slate-700">
+            {status}
+          </span>
+        );
+    }
+  };
 
-      <div className="no-print flex items-center gap-3">
+  return (
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      {/* Header */}
+      <div className="flex items-center gap-3">
         <button
           onClick={() => navigate('/dashboard')}
           className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
@@ -36,49 +89,92 @@ export default function QRPage() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">My ResQTag QR Manager</h1>
-          <p className="text-xs text-slate-500">Download, print, and configure your physical emergency tag</p>
+          <h1 className="text-2xl font-black text-slate-900">Physical ResQTag & Orders</h1>
+          <p className="text-xs text-slate-500">Manage your encrypted tag security and track physical tag printing</p>
         </div>
       </div>
 
-      <div className="no-print space-y-6">
+      <div className="space-y-8">
         {/* Main QR Card */}
-        <QRCard qr={qr} onQRUpdated={loadQR} />
+        <QRCard qr={qr} user={user} onQRUpdated={loadData} />
 
-        {/* Physical Tag Assembly Guide */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
-            <div className="p-2 rounded-xl bg-amber-50 text-amber-600">
-              <Tag className="w-4 h-4" />
-            </div>
-            <h3 className="font-bold text-slate-900 text-sm">How to Create Your Physical ResQTag</h3>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-              <span className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-xs">1</span>
-              <h4 className="font-bold text-slate-900">Print the Sheet</h4>
-              <p className="text-slate-600 leading-relaxed">
-                Click "Print Keychain Tag" above to print the formatted mini keychain tag and wallet card.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-              <span className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-xs">2</span>
-              <h4 className="font-bold text-slate-900">Laminate or Protect</h4>
-              <p className="text-slate-600 leading-relaxed">
-                Cut along the dotted borders. Protect the tag with clear tape, a thermal laminator, or a clear acrylic key fob.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-              <span className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-xs">3</span>
-              <h4 className="font-bold text-slate-900">Attach & Go</h4>
-              <p className="text-slate-600 leading-relaxed">
-                Punch a hole at the top marker and attach to your keys, backpack zipper, pet collar, or slide into your wallet.
-              </p>
+        {/* Order History & Tracking Section */}
+        <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 rounded-2xl bg-brand-50 text-brand-600 border border-brand-100">
+                <Package className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm sm:text-base">Your Tag Order History</h3>
+                <p className="text-xs text-slate-500">Live production and fulfillment tracking for your physical kits</p>
+              </div>
             </div>
           </div>
+
+          {loadingOrders ? (
+            <div className="p-8 flex justify-center">
+              <Loader2 className="w-6 h-6 text-brand-600 animate-spin" />
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-2">
+              <Package className="w-8 h-8 text-slate-400 mx-auto" />
+              <p className="text-xs font-bold text-slate-700">No physical tag orders placed yet</p>
+              <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                Use the "Order Official Physical ResQTag" button above to request your physical keychain tag and emergency wallet card.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {orders.map((order) => (
+                <div
+                  key={order.order_id}
+                  className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-slate-300 transition-all space-y-3"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 pb-3">
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono font-bold text-xs bg-slate-200 text-slate-800 px-2 py-0.5 rounded-md">
+                        Order #{order.order_id}
+                      </span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {order.quantity}x Official ResQTag Kit
+                      </span>
+                    </div>
+                    {getStatusBadge(order.order_status)}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-600">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>Ordered: {new Date(order.created_at).toLocaleDateString()}</span>
+                    </div>
+
+                    <div className="sm:col-span-2 flex items-start gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                      <span className="truncate">{order.shipping_address}</span>
+                    </div>
+                  </div>
+
+                  {order.notes && (
+                    <div className="text-[11px] text-slate-500 bg-white p-2 rounded-xl border border-slate-200/60">
+                      <strong>Delivery Notes:</strong> {order.notes}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Why Physical ResQTag Info Box */}
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm border border-slate-700">
+          <div className="flex items-center gap-2 text-brand-400 font-bold text-xs uppercase tracking-wider">
+            <ShieldCheck className="w-4 h-4" />
+            <span>Why Official Physical Tags?</span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            ResQTag physical keychains and emergency cards are manufactured using high-grade acrylic and thermal-sealed protective layers to withstand water, weather, and physical wear during sports, travel, and emergencies. Each tag is laser-encoded with your secure cloud profile token.
+          </p>
         </div>
       </div>
     </div>

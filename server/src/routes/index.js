@@ -6,6 +6,7 @@ import privacyRoutes from './privacyRoutes.js';
 import qrRoutes from './qrRoutes.js';
 import publicRoutes from './publicRoutes.js';
 import adminRoutes from './adminRoutes.js';
+import tagOrderRoutes from './tagOrderRoutes.js';
 
 const router = express.Router();
 
@@ -21,5 +22,6 @@ router.use('/privacy', privacyRoutes);
 router.use('/qr', qrRoutes);
 router.use('/public', publicRoutes);
 router.use('/admin', adminRoutes);
+router.use('/tag-orders', tagOrderRoutes);
 
 export default router;

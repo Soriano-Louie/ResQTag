@@ -173,9 +173,9 @@ export default function Home() {
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xl">
               2
             </div>
-            <h3 className="font-bold text-slate-900 text-lg">Print or Attach QR Tag</h3>
+            <h3 className="font-bold text-slate-900 text-lg">Order Your Physical Kit</h3>
             <p className="text-slate-600 text-sm leading-relaxed">
-              Download your unique QR code or use our print-ready template to attach a physical tag to your keychain, backpack, or wallet card.
+              Request your official physical ResQTag acrylic keychain and emergency wallet card, encoded with your secure cloud profile.
             </p>
           </div>
 
