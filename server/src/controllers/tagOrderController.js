@@ -10,7 +10,7 @@ import pool from '../config/db.js';
 export async function createOrder(req, res) {
   try {
     const userId = req.user.user_id;
-    const { recipientName, contactNumber, shippingAddress, quantity, notes } = req.body;
+    const { recipientName, contactNumber, shippingAddress, tagType, quantity, notes } = req.body;
 
     // Validation
     if (!recipientName || !contactNumber || !shippingAddress) {
@@ -18,6 +18,9 @@ export async function createOrder(req, res) {
         message: 'Recipient name, contact number, and shipping address are required.' 
       });
     }
+
+    const validTagTypes = ['keychain', 'wallet_card', 'bundle'];
+    const chosenType = validTagTypes.includes(tagType) ? tagType : 'keychain';
 
     const qty = parseInt(quantity, 10) || 1;
     if (qty < 1 || qty > 20) {
@@ -37,15 +40,16 @@ export async function createOrder(req, res) {
     }
 
     const [result] = await pool.query(
-      `INSERT INTO tag_orders (user_id, recipient_name, contact_number, shipping_address, quantity, order_status, notes)
-       VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
-      [userId, recipientName.trim(), contactNumber.trim(), shippingAddress.trim(), qty, notes ? notes.trim() : null]
+      `INSERT INTO tag_orders (user_id, recipient_name, contact_number, shipping_address, tag_type, quantity, order_status, notes)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
+      [userId, recipientName.trim(), contactNumber.trim(), shippingAddress.trim(), chosenType, qty, notes ? notes.trim() : null]
     );
 
     return res.status(201).json({
       message: 'Physical ResQTag order request submitted successfully!',
       orderId: result.insertId,
-      status: 'pending'
+      status: 'pending',
+      tagType: chosenType
     });
   } catch (error) {
     console.error('createOrder error:', error);
@@ -61,7 +65,7 @@ export async function getMyOrders(req, res) {
     const userId = req.user.user_id;
 
     const [orders] = await pool.query(
-      `SELECT order_id, recipient_name, contact_number, shipping_address, quantity, order_status, notes, created_at, updated_at
+      `SELECT order_id, recipient_name, contact_number, shipping_address, tag_type, quantity, order_status, notes, created_at, updated_at
        FROM tag_orders
        WHERE user_id = ?
        ORDER BY created_at DESC`,
@@ -122,6 +126,7 @@ export async function getAdminOrders(req, res) {
          o.recipient_name, 
          o.contact_number, 
          o.shipping_address, 
+         o.tag_type, 
          o.quantity, 
          o.order_status, 
          o.notes, 
@@ -212,6 +217,7 @@ export async function getOrderPrintData(req, res) {
          o.recipient_name, 
          o.contact_number, 
          o.shipping_address, 
+         o.tag_type, 
          o.quantity, 
          o.order_status, 
          o.created_at,

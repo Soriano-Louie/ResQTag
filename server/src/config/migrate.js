@@ -99,6 +99,7 @@ export async function runMigrations() {
         recipient_name VARCHAR(100) NOT NULL,
         contact_number VARCHAR(30) NOT NULL,
         shipping_address TEXT NOT NULL,
+        tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain',
         quantity INT DEFAULT 1,
         order_status ENUM('pending', 'processing', 'printed', 'delivered', 'cancelled') DEFAULT 'pending',
         notes TEXT NULL,
@@ -109,6 +110,16 @@ export async function runMigrations() {
         INDEX idx_order_status (order_status)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    // Ensure tag_type exists if table was previously created
+    try {
+      await connection.query(`
+        ALTER TABLE tag_orders 
+        ADD COLUMN IF NOT EXISTS tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain' AFTER shipping_address;
+      `);
+    } catch (e) {
+      // Column may already exist or older mysql syntax; ignore if exists
+    }
 
     // Seed default admin if none exists
     const [adminCheck] = await connection.query('SELECT user_id FROM users WHERE role = ? LIMIT 1', ['admin']);

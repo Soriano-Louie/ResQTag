@@ -10,6 +10,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
     recipientName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
     contactNumber: '',
     shippingAddress: '',
+    tagType: 'keychain', // 'keychain' | 'wallet_card' | 'bundle'
     quantity: 1,
     notes: ''
   });
@@ -40,6 +41,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
         recipientName: formData.recipientName,
         contactNumber: formData.contactNumber,
         shippingAddress: formData.shippingAddress,
+        tagType: formData.tagType,
         quantity: parseInt(formData.quantity, 10) || 1,
         notes: formData.notes
       });
@@ -73,29 +75,83 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
           <div>
             <h2 className="text-lg font-black text-slate-900">Order Official ResQTag</h2>
             <p className="text-xs text-slate-500">
-              Request printing & fulfillment of your physical emergency kit
-            </p>
-          </div>
-        </div>
-
-        {/* Product Summary Box */}
-        <div className="mt-5 p-4 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 text-white flex items-center justify-between">
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-1.5 text-brand-400 text-xs font-bold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Official Emergency Kit</span>
-            </div>
-            <h3 className="font-extrabold text-sm text-slate-100">
-              ResQTag Physical Keychain + Wallet Card
-            </h3>
-            <p className="text-[11px] text-slate-300">
-              Durable acrylic QR tag & waterproof medical info card
+              Select tag format, enter delivery details, and submit for fulfillment
             </p>
           </div>
         </div>
 
         {/* Order Form */}
         <form onSubmit={handleSubmit} className="mt-5 space-y-4 text-xs">
+          {/* Format Selection Cards */}
+          <div>
+            <label className="font-bold text-slate-700 block mb-2">
+              Select Physical Tag Format <span className="text-rose-500">*</span>
+            </label>
+            <div className="grid grid-cols-3 gap-2.5">
+              {/* Keychain */}
+              <button
+                type="button"
+                onClick={() => setFormData(p => ({ ...p, tagType: 'keychain' }))}
+                className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all ${
+                  formData.tagType === 'keychain'
+                    ? 'border-brand-600 bg-brand-50/50 ring-2 ring-brand-500/20 text-slate-900'
+                    : 'border-slate-200 bg-slate-50 hover:bg-slate-100/60 text-slate-600'
+                }`}
+              >
+                <div>
+                  <span className="font-black text-xs block text-slate-900">🔑 Keychain Tag</span>
+                  <span className="text-[10px] text-slate-500 mt-0.5 block leading-tight">
+                    Acrylic fob for keys, bags & pet collars
+                  </span>
+                </div>
+                <span className={`text-[9px] font-bold mt-2 inline-block uppercase ${formData.tagType === 'keychain' ? 'text-brand-600' : 'text-slate-400'}`}>
+                  {formData.tagType === 'keychain' ? '● Selected' : '○ Choose'}
+                </span>
+              </button>
+
+              {/* Wallet Card */}
+              <button
+                type="button"
+                onClick={() => setFormData(p => ({ ...p, tagType: 'wallet_card' }))}
+                className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all ${
+                  formData.tagType === 'wallet_card'
+                    ? 'border-brand-600 bg-brand-50/50 ring-2 ring-brand-500/20 text-slate-900'
+                    : 'border-slate-200 bg-slate-50 hover:bg-slate-100/60 text-slate-600'
+                }`}
+              >
+                <div>
+                  <span className="font-black text-xs block text-slate-900">💳 Wallet Card</span>
+                  <span className="text-[10px] text-slate-500 mt-0.5 block leading-tight">
+                    Standard credit-card size for wallet or phone
+                  </span>
+                </div>
+                <span className={`text-[9px] font-bold mt-2 inline-block uppercase ${formData.tagType === 'wallet_card' ? 'text-brand-600' : 'text-slate-400'}`}>
+                  {formData.tagType === 'wallet_card' ? '● Selected' : '○ Choose'}
+                </span>
+              </button>
+
+              {/* Complete Bundle */}
+              <button
+                type="button"
+                onClick={() => setFormData(p => ({ ...p, tagType: 'bundle' }))}
+                className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all ${
+                  formData.tagType === 'bundle'
+                    ? 'border-brand-600 bg-brand-50/50 ring-2 ring-brand-500/20 text-slate-900'
+                    : 'border-slate-200 bg-slate-50 hover:bg-slate-100/60 text-slate-600'
+                }`}
+              >
+                <div>
+                  <span className="font-black text-xs block text-slate-900">⭐ Complete Kit</span>
+                  <span className="text-[10px] text-slate-500 mt-0.5 block leading-tight">
+                    Both Keychain Tag + Emergency Wallet Card
+                  </span>
+                </div>
+                <span className={`text-[9px] font-bold mt-2 inline-block uppercase ${formData.tagType === 'bundle' ? 'text-brand-600' : 'text-slate-400'}`}>
+                  {formData.tagType === 'bundle' ? '● Selected' : '○ Choose'}
+                </span>
+              </button>
+            </div>
+          </div>
           {/* Recipient Name */}
           <div>
             <label className="font-bold text-slate-700 block mb-1">

@@ -323,6 +323,7 @@ export default function AdminDashboard() {
                   <tr>
                     <th className="p-4">Order ID</th>
                     <th className="p-4">Customer & Recipient</th>
+                    <th className="p-4">Format</th>
                     <th className="p-4">Quantity</th>
                     <th className="p-4">Delivery Address</th>
                     <th className="p-4">Status</th>
@@ -346,8 +347,14 @@ export default function AdminDashboard() {
                         </span>
                       </td>
 
+                      <td className="p-4">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-100 text-slate-800 border border-slate-200">
+                          {order.tag_type === 'keychain' ? '🔑 Keychain' : order.tag_type === 'wallet_card' ? '💳 Wallet Card' : '⭐ Complete Kit'}
+                        </span>
+                      </td>
+
                       <td className="p-4 font-bold text-slate-900">
-                        {order.quantity}x Kit
+                        {order.quantity}x
                       </td>
 
                       <td className="p-4 max-w-xs text-slate-700 truncate" title={order.shipping_address}>

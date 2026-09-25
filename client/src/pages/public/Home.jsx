@@ -78,10 +78,10 @@ export default function Home() {
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Granular Privacy Whitelist
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" /> One-Touch Emergency Dial
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" /> 1-Touch Emergency Dialing
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Printable Keychain Tag
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Keychain & Wallet Card Kits
                 </span>
               </div>
             </div>
@@ -141,6 +141,41 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature Pillar Highlights */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+              📞
+            </div>
+            <h3 className="font-black text-slate-900 text-base">One-Touch Responder Dialing</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              In a crisis, first responders don't need to manually copy numbers. Contacts you set as <strong>Public</strong> display large 1-tap call buttons to dial family, guardians, or doctors immediately.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
+              🛡️
+            </div>
+            <h3 className="font-black text-slate-900 text-base">Lost Tag Invalidation & Regeneration</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              If your keychain or wallet card is ever lost, 1 click on <strong>"Regenerate"</strong> kills the old QR code in the cloud so nobody can view your private medical history, and lets you re-order a replacement.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center text-xl">
+              🔑
+            </div>
+            <h3 className="font-black text-slate-900 text-base">Keychain & Wallet Card Kits</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Choose your preferred physical format: heavy-duty acrylic key fobs for bags and keys, waterproof credit-card sized emergency wallet cards, or complete bundles.
+            </p>
           </div>
         </div>
       </section>

@@ -54,6 +54,7 @@ export default function AdminPrintModal({ orderId, onClose, onStatusUpdated }) {
         <PrintableTag
           qr={{ qr_token: data.order.qr_token, status: data.order.qr_status }}
           user={{ firstName: data.order.first_name, lastName: data.order.last_name }}
+          tagType={data.order.tag_type || 'bundle'}
         />
       )}
 
@@ -96,9 +97,17 @@ export default function AdminPrintModal({ orderId, onClose, onStatusUpdated }) {
                 <span className="font-bold text-slate-900">{data.order.recipient_name}</span>
                 <span className="text-slate-500 block">{data.order.contact_number}</span>
               </div>
-              <div className="col-span-2 pt-2 border-t border-slate-200/60">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Shipping Address</span>
-                <span className="font-medium text-slate-800">{data.order.shipping_address}</span>
+              <div className="col-span-2 pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Shipping Address</span>
+                  <span className="font-medium text-slate-800">{data.order.shipping_address}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Requested Format</span>
+                  <span className="font-black text-xs text-brand-600 uppercase">
+                    {data.order.tag_type === 'keychain' ? '🔑 Keychain Tag' : data.order.tag_type === 'wallet_card' ? '💳 Wallet Card' : '⭐ Complete Kit'}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -118,7 +127,7 @@ export default function AdminPrintModal({ orderId, onClose, onStatusUpdated }) {
 
             {/* Print Instructions */}
             <div className="p-3 bg-brand-50 border border-brand-100 rounded-2xl text-brand-900 leading-relaxed text-[11px]">
-              Click <strong>"Print Physical Sheet"</strong> below. It will open your system's print dialog with calibrated cutting guidelines for both the Keychain Tag (front/back) and the Emergency Wallet Card.
+              Click <strong>"Print Physical Sheet"</strong> below. It will open your system's print dialog with calibrated cutting guidelines tailored for <strong>{data.order.tag_type === 'keychain' ? 'Keychain Tags' : data.order.tag_type === 'wallet_card' ? 'Wallet Emergency Cards' : 'Complete Kit (Keychain + Card)'}</strong>.
             </div>
 
             {/* Action Buttons */}

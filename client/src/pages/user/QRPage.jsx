@@ -132,12 +132,12 @@ export default function QRPage() {
                   className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-slate-300 transition-all space-y-3"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 pb-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
                       <span className="font-mono font-bold text-xs bg-slate-200 text-slate-800 px-2 py-0.5 rounded-md">
                         Order #{order.order_id}
                       </span>
                       <span className="text-xs font-bold text-slate-900">
-                        {order.quantity}x Official ResQTag Kit
+                        {order.quantity}x {order.tag_type === 'keychain' ? 'Acrylic Keychain Tag' : order.tag_type === 'wallet_card' ? 'Emergency Wallet Card' : 'Complete Kit (Keychain + Card)'}
                       </span>
                     </div>
                     {getStatusBadge(order.order_status)}
@@ -166,14 +166,39 @@ export default function QRPage() {
           )}
         </div>
 
+        {/* Feature Explanations: 1-Touch Responder Dialing & Lost Tag Regeneration */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Card 1: 1-Touch Responder Dialing */}
+          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              📞
+            </div>
+            <h3 className="font-bold text-slate-900 text-sm">One-Touch Responder Dialing</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              When a rescuer or first responder scans your physical tag, any emergency contacts you have marked as <strong>Public</strong> automatically display large, one-tap call buttons. Responders can immediately dial your family, doctor, or guardian directly from their phone with zero manual typing.
+            </p>
+          </div>
+
+          {/* Card 2: Lost Tag Regeneration Security */}
+          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+              🛡️
+            </div>
+            <h3 className="font-bold text-slate-900 text-sm">Lost Tag Invalidation & Regeneration</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              If your keychain tag or wallet card is ever lost or stolen, click <strong>"Lost Tag? Regenerate"</strong> above. This instantly kills the old encrypted QR token in the cloud so nobody who finds it can scan your personal medical data. You can then submit a replacement tag request right away.
+            </p>
+          </div>
+        </div>
+
         {/* Why Physical ResQTag Info Box */}
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm border border-slate-700">
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-3xl p-6 sm:p-8 space-y-3 shadow-sm border border-slate-700">
           <div className="flex items-center gap-2 text-brand-400 font-bold text-xs uppercase tracking-wider">
             <ShieldCheck className="w-4 h-4" />
-            <span>Why Official Physical Tags?</span>
+            <span>Official Encrypted Physical Tag Kits</span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            ResQTag physical keychains and emergency cards are manufactured using high-grade acrylic and thermal-sealed protective layers to withstand water, weather, and physical wear during sports, travel, and emergencies. Each tag is laser-encoded with your secure cloud profile token.
+          <p className="text-xs text-slate-300 leading-relaxed">
+            ResQTag physical keychains and emergency cards are manufactured using heavy-duty acrylic inserts and thermal-sealed protective layers to withstand water, weather, and physical wear during sports, travel, and emergencies. Each tag is calibrated and encoded with your secure cloud profile.
           </p>
         </div>
       </div>

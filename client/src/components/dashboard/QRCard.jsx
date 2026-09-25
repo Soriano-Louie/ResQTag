@@ -177,31 +177,31 @@ export default function QRCard({ qr, user, onQRUpdated }) {
 
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-6">
         {/* Card Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <div className="flex items-center gap-2.5">
-            <div className={`p-2.5 rounded-2xl border ${isAdmin ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-brand-50 text-brand-600 border-brand-100'}`}>
+        <div className="flex items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className={`p-2.5 rounded-2xl border shrink-0 ${isAdmin ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-brand-50 text-brand-600 border-brand-100'}`}>
               {isAdmin ? <Crown className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-slate-900 text-sm">
-                  {isAdmin ? 'Admin ResQTag Direct Access' : 'ResQTag Security & Physical Kit'}
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <h3 className="font-bold text-slate-900 text-sm truncate">
+                  {isAdmin ? 'Admin ResQTag Access' : 'ResQTag Security & Kit'}
                 </h3>
                 {isAdmin && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-amber-100 text-amber-800">
-                    Admin Privileges
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-amber-100 text-amber-800 shrink-0">
+                    Admin
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-500">
-                {isAdmin ? 'Direct QR view, download & printing enabled for Admin' : 'Official encrypted tag & order fulfillment'}
+              <p className="text-[11px] text-slate-500 truncate">
+                {isAdmin ? 'Direct QR view, download & printing enabled' : 'Official encrypted tag & order fulfillment'}
               </p>
             </div>
           </div>
 
           {/* Tag Status Badge */}
           <span
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase ${
+            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase ${
               isActive
                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 : 'bg-rose-50 text-rose-700 border border-rose-200'
@@ -216,55 +216,56 @@ export default function QRCard({ qr, user, onQRUpdated }) {
             ADMIN VIEW: FULL QR VIEW, DOWNLOAD & DIRECT PRINT
             ======================================================== */}
         {isAdmin ? (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row gap-5 items-center p-5 bg-slate-50 rounded-2xl border border-slate-200">
+          <div className="space-y-4">
+            {/* QR Preview & Quick Actions Box */}
+            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center space-y-4">
               {/* QR Preview Canvas */}
-              <div className="bg-white p-3.5 rounded-2xl shadow-md border border-slate-100 flex flex-col items-center shrink-0">
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center">
                 <QRCodeCanvas
                   id="resqtag-admin-qr-canvas"
                   value={emergencyUrl}
-                  size={150}
+                  size={160}
                   level="H"
                   includeMargin={true}
                   imageSettings={{
                     src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e11d48'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>",
                     x: undefined,
                     y: undefined,
-                    height: 30,
-                    width: 30,
+                    height: 32,
+                    width: 32,
                     excavate: true,
                   }}
                 />
-                <span className="mt-1.5 text-[10px] font-mono font-bold tracking-wider uppercase text-slate-400">
+                <span className="mt-2 text-[10px] font-mono font-bold tracking-wider uppercase text-slate-400">
                   RQ-{qr.qr_token.slice(0, 8).toUpperCase()}
                 </span>
               </div>
 
               {/* Admin Actions */}
-              <div className="flex-1 w-full space-y-3 text-xs">
-                <div>
+              <div className="w-full space-y-3 text-xs">
+                <div className="w-full min-w-0">
                   <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
-                    Emergency URL
+                    Emergency Profile URL
                   </label>
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex-1 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 font-mono text-[11px] text-slate-700 truncate select-all">
+                  <div className="flex items-center gap-1.5 w-full min-w-0">
+                    <div className="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl px-2.5 py-2 font-mono text-[11px] text-slate-700 truncate select-all">
                       {emergencyUrl}
                     </div>
                     <button
                       onClick={handleCopyLink}
-                      className="p-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl transition-colors"
+                      className="p-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl transition-colors shrink-0"
                       title="Copy URL"
                     >
-                      {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                     </button>
                     <a
                       href={emergencyUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="p-2 bg-brand-50 hover:bg-brand-100 text-brand-600 border border-brand-200 rounded-xl transition-colors"
+                      className="p-2 bg-brand-50 hover:bg-brand-100 text-brand-600 border border-brand-200 rounded-xl transition-colors shrink-0"
                       title="Preview Public Page"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
+                      <ExternalLink className="w-4 h-4" />
                     </a>
                   </div>
                 </div>
@@ -272,16 +273,16 @@ export default function QRCard({ qr, user, onQRUpdated }) {
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button
                     onClick={handleDownloadPNG}
-                    className="flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-sm transition-all text-xs"
+                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-sm transition-all text-xs"
                   >
-                    <Download className="w-3.5 h-3.5" />
+                    <Download className="w-4 h-4" />
                     Download PNG
                   </button>
                   <button
                     onClick={handlePrint}
-                    className="flex items-center justify-center gap-1.5 py-2 px-3 bg-white hover:bg-slate-100 text-slate-800 font-bold rounded-xl border border-slate-300 shadow-sm transition-all text-xs"
+                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-white hover:bg-slate-100 text-slate-800 font-bold rounded-xl border border-slate-300 shadow-sm transition-all text-xs"
                   >
-                    <Printer className="w-3.5 h-3.5 text-slate-600" />
+                    <Printer className="w-4 h-4 text-slate-600" />
                     Print Tag
                   </button>
                 </div>
@@ -296,7 +297,7 @@ export default function QRCard({ qr, user, onQRUpdated }) {
               </div>
               <button
                 onClick={() => setShowOrderModal(true)}
-                className="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all"
+                className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow"
               >
                 <Package className="w-3.5 h-3.5" />
                 Order Kit
