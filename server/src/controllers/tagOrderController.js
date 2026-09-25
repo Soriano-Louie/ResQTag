@@ -39,11 +39,31 @@ export async function createOrder(req, res) {
       });
     }
 
-    const [result] = await pool.query(
-      `INSERT INTO tag_orders (user_id, recipient_name, contact_number, shipping_address, tag_type, quantity, order_status, notes)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
-      [userId, recipientName.trim(), contactNumber.trim(), shippingAddress.trim(), chosenType, qty, notes ? notes.trim() : null]
-    );
+    let result;
+    try {
+      const [insertRes] = await pool.query(
+        `INSERT INTO tag_orders (user_id, recipient_name, contact_number, shipping_address, tag_type, quantity, order_status, notes)
+         VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
+        [userId, recipientName.trim(), contactNumber.trim(), shippingAddress.trim(), chosenType, qty, notes ? notes.trim() : null]
+      );
+      result = insertRes;
+    } catch (dbErr) {
+      // Self-healing: if tag_type column is missing on older table, add column and retry
+      if (dbErr.code === 'ER_BAD_FIELD_ERROR' || dbErr.message?.includes('tag_type')) {
+        await pool.query(`
+          ALTER TABLE tag_orders 
+          ADD COLUMN tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain' AFTER shipping_address;
+        `);
+        const [retryRes] = await pool.query(
+          `INSERT INTO tag_orders (user_id, recipient_name, contact_number, shipping_address, tag_type, quantity, order_status, notes)
+           VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
+          [userId, recipientName.trim(), contactNumber.trim(), shippingAddress.trim(), chosenType, qty, notes ? notes.trim() : null]
+        );
+        result = retryRes;
+      } else {
+        throw dbErr;
+      }
+    }
 
     return res.status(201).json({
       message: 'Physical ResQTag order request submitted successfully!',
@@ -64,15 +84,36 @@ export async function getMyOrders(req, res) {
   try {
     const userId = req.user.user_id;
 
-    const [orders] = await pool.query(
-      `SELECT order_id, recipient_name, contact_number, shipping_address, tag_type, quantity, order_status, notes, created_at, updated_at
-       FROM tag_orders
-       WHERE user_id = ?
-       ORDER BY created_at DESC`,
-      [userId]
-    );
+    let orders;
+    try {
+      const [rows] = await pool.query(
+        `SELECT order_id, recipient_name, contact_number, shipping_address, tag_type, quantity, order_status, notes, created_at, updated_at
+         FROM tag_orders
+         WHERE user_id = ?
+         ORDER BY created_at DESC`,
+        [userId]
+      );
+      orders = rows;
+    } catch (dbErr) {
+      if (dbErr.code === 'ER_BAD_FIELD_ERROR' || dbErr.message?.includes('tag_type')) {
+        await pool.query(`
+          ALTER TABLE tag_orders 
+          ADD COLUMN tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain' AFTER shipping_address;
+        `);
+        const [rows] = await pool.query(
+          `SELECT order_id, recipient_name, contact_number, shipping_address, tag_type, quantity, order_status, notes, created_at, updated_at
+           FROM tag_orders
+           WHERE user_id = ?
+           ORDER BY created_at DESC`,
+          [userId]
+        );
+        orders = rows;
+      } else {
+        throw dbErr;
+      }
+    }
 
-    return res.json({ orders });
+    return res.json({ orders: orders || [] });
   } catch (error) {
     console.error('getMyOrders error:', error);
     return res.status(500).json({ message: 'Failed to fetch your tag orders.', error: error.message });
@@ -119,32 +160,72 @@ export async function getAdminOrders(req, res) {
     const totalOrders = countResult[0].total;
 
     // Data query
-    const [orders] = await pool.query(
-      `SELECT 
-         o.order_id, 
-         o.user_id, 
-         o.recipient_name, 
-         o.contact_number, 
-         o.shipping_address, 
-         o.tag_type, 
-         o.quantity, 
-         o.order_status, 
-         o.notes, 
-         o.created_at, 
-         o.updated_at,
-         u.first_name, 
-         u.last_name, 
-         u.email,
-         q.qr_token,
-         q.status as qr_status
-       FROM tag_orders o
-       JOIN users u ON o.user_id = u.user_id
-       LEFT JOIN qr_tags q ON o.user_id = q.user_id
-       ${whereSql}
-       ORDER BY o.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...queryParams, parseInt(limit, 10), offset]
-    );
+    let orders;
+    try {
+      const [rows] = await pool.query(
+        `SELECT 
+           o.order_id, 
+           o.user_id, 
+           o.recipient_name, 
+           o.contact_number, 
+           o.shipping_address, 
+           o.tag_type, 
+           o.quantity, 
+           o.order_status, 
+           o.notes, 
+           o.created_at, 
+           o.updated_at,
+           u.first_name, 
+           u.last_name, 
+           u.email,
+           q.qr_token,
+           q.status as qr_status
+         FROM tag_orders o
+         JOIN users u ON o.user_id = u.user_id
+         LEFT JOIN qr_tags q ON o.user_id = q.user_id
+         ${whereSql}
+         ORDER BY o.created_at DESC
+         LIMIT ? OFFSET ?`,
+        [...queryParams, parseInt(limit, 10), offset]
+      );
+      orders = rows;
+    } catch (dbErr) {
+      if (dbErr.code === 'ER_BAD_FIELD_ERROR' || dbErr.message?.includes('tag_type')) {
+        await pool.query(`
+          ALTER TABLE tag_orders 
+          ADD COLUMN tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain' AFTER shipping_address;
+        `);
+        const [rows] = await pool.query(
+          `SELECT 
+             o.order_id, 
+             o.user_id, 
+             o.recipient_name, 
+             o.contact_number, 
+             o.shipping_address, 
+             o.tag_type, 
+             o.quantity, 
+             o.order_status, 
+             o.notes, 
+             o.created_at, 
+             o.updated_at,
+             u.first_name, 
+             u.last_name, 
+             u.email,
+             q.qr_token,
+             q.status as qr_status
+           FROM tag_orders o
+           JOIN users u ON o.user_id = u.user_id
+           LEFT JOIN qr_tags q ON o.user_id = q.user_id
+           ${whereSql}
+           ORDER BY o.created_at DESC
+           LIMIT ? OFFSET ?`,
+          [...queryParams, parseInt(limit, 10), offset]
+        );
+        orders = rows;
+      } else {
+        throw dbErr;
+      }
+    }
 
     // Order counts by status for metrics
     const [statusCounts] = await pool.query(`
@@ -211,29 +292,66 @@ export async function getOrderPrintData(req, res) {
   try {
     const { id } = req.params;
 
-    const [orderRows] = await pool.query(
-      `SELECT 
-         o.order_id, 
-         o.recipient_name, 
-         o.contact_number, 
-         o.shipping_address, 
-         o.tag_type, 
-         o.quantity, 
-         o.order_status, 
-         o.created_at,
-         u.user_id,
-         u.first_name, 
-         u.middle_name, 
-         u.last_name, 
-         u.email,
-         q.qr_token,
-         q.status as qr_status
-       FROM tag_orders o
-       JOIN users u ON o.user_id = u.user_id
-       LEFT JOIN qr_tags q ON o.user_id = q.user_id
-       WHERE o.order_id = ?`,
-      [id]
-    );
+    let orderRows;
+    try {
+      const [rows] = await pool.query(
+        `SELECT 
+           o.order_id, 
+           o.recipient_name, 
+           o.contact_number, 
+           o.shipping_address, 
+           o.tag_type, 
+           o.quantity, 
+           o.order_status, 
+           o.created_at,
+           u.user_id,
+           u.first_name, 
+           u.middle_name, 
+           u.last_name, 
+           u.email,
+           q.qr_token,
+           q.status as qr_status
+         FROM tag_orders o
+         JOIN users u ON o.user_id = u.user_id
+         LEFT JOIN qr_tags q ON o.user_id = q.user_id
+         WHERE o.order_id = ?`,
+        [id]
+      );
+      orderRows = rows;
+    } catch (dbErr) {
+      if (dbErr.code === 'ER_BAD_FIELD_ERROR' || dbErr.message?.includes('tag_type')) {
+        await pool.query(`
+          ALTER TABLE tag_orders 
+          ADD COLUMN tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain' AFTER shipping_address;
+        `);
+        const [rows] = await pool.query(
+          `SELECT 
+             o.order_id, 
+             o.recipient_name, 
+             o.contact_number, 
+             o.shipping_address, 
+             o.tag_type, 
+             o.quantity, 
+             o.order_status, 
+             o.created_at,
+             u.user_id,
+             u.first_name, 
+             u.middle_name, 
+             u.last_name, 
+             u.email,
+             q.qr_token,
+             q.status as qr_status
+           FROM tag_orders o
+           JOIN users u ON o.user_id = u.user_id
+           LEFT JOIN qr_tags q ON o.user_id = q.user_id
+           WHERE o.order_id = ?`,
+          [id]
+        );
+        orderRows = rows;
+      } else {
+        throw dbErr;
+      }
+    }
 
     if (orderRows.length === 0) {
       return res.status(404).json({ message: 'Order not found.' });

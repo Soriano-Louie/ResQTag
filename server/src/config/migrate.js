@@ -118,14 +118,25 @@ export async function runMigrations() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // Ensure tag_type exists if table was previously created
+    // 6. Ensure tag_type column exists on tag_orders
     try {
-      await connection.query(`
-        ALTER TABLE tag_orders 
-        ADD COLUMN IF NOT EXISTS tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain' AFTER shipping_address;
+      const [colCheck] = await connection.query(`
+        SELECT COLUMN_NAME 
+        FROM information_schema.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+          AND TABLE_NAME = 'tag_orders' 
+          AND COLUMN_NAME = 'tag_type';
       `);
-    } catch (e) {
-      // Column may already exist or older mysql syntax; ignore if exists
+
+      if (colCheck.length === 0) {
+        await connection.query(`
+          ALTER TABLE tag_orders 
+          ADD COLUMN tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain' AFTER shipping_address;
+        `);
+        console.log('✅ Added missing tag_type column to tag_orders table.');
+      }
+    } catch (err) {
+      console.error('Column migration note:', err.message);
     }
 
     // Seed default admin if none exists

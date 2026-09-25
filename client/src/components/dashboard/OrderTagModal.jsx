@@ -1,19 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Package, MapPin, Phone, User, AlertCircle, Loader2, X, Sparkles } from 'lucide-react';
 import { tagOrderService } from '../../services/tagOrderService';
+import { profileService } from '../../services/profileService';
 import { useToast } from '../../context/ToastContext';
 
 export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess }) {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
+  const [fetchingProfile, setFetchingProfile] = useState(false);
   const [formData, setFormData] = useState({
-    recipientName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
+    recipientName: '',
     contactNumber: '',
     shippingAddress: '',
     tagType: 'keychain', // 'keychain' | 'wallet_card' | 'bundle'
     quantity: 1,
     notes: ''
   });
+
+  // Autofill from user and profile data when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const defaultName = [user?.firstName, user?.middleName, user?.lastName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    async function autofillProfileData() {
+      try {
+        setFetchingProfile(true);
+        const profileData = await profileService.getProfile();
+        setFormData(prev => ({
+          ...prev,
+          recipientName: prev.recipientName || defaultName,
+          contactNumber: prev.contactNumber || profileData?.personal?.contactNumber || '',
+          shippingAddress: prev.shippingAddress || profileData?.personal?.address || ''
+        }));
+      } catch (err) {
+        // Fallback to basic user data
+        setFormData(prev => ({
+          ...prev,
+          recipientName: prev.recipientName || defaultName
+        }));
+      } finally {
+        setFetchingProfile(false);
+      }
+    }
+
+    autofillProfileData();
+  }, [isOpen, user]);
 
   if (!isOpen) return null;
 
@@ -152,6 +187,16 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
               </button>
             </div>
           </div>
+
+          {/* Autofill Status Helper */}
+          <div className="flex items-center justify-between text-[11px] text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-brand-600" />
+              <span>Details autofilled from your emergency profile.</span>
+            </span>
+            <span className="text-[10px] text-slate-400">Editable</span>
+          </div>
+
           {/* Recipient Name */}
           <div>
             <label className="font-bold text-slate-700 block mb-1">
