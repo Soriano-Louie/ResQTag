@@ -14,7 +14,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const from = location.state?.from?.pathname || '/dashboard';
+  const rawFrom = location.state?.from?.pathname;
+  const destination = (rawFrom && rawFrom !== '/login' && rawFrom !== '/register') ? rawFrom : '/dashboard';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,7 +28,7 @@ export default function Login() {
       setLoading(true);
       const res = await login({ email: email.trim(), password });
       toast.success(`Welcome back, ${res.user.firstName}!`);
-      navigate(from, { replace: true });
+      navigate(destination, { replace: true });
     } catch (err) {
       toast.error(err.message);
     } finally {

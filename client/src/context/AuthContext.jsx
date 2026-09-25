@@ -29,12 +29,18 @@ export function AuthProvider({ children }) {
 
   const login = async (credentials) => {
     const data = await authService.login(credentials);
+    if (data.token) {
+      localStorage.setItem('resqtag_token', data.token);
+    }
     await refreshUser();
     return data;
   };
 
   const register = async (userData) => {
     const data = await authService.register(userData);
+    if (data.token) {
+      localStorage.setItem('resqtag_token', data.token);
+    }
     await refreshUser();
     return data;
   };
@@ -43,6 +49,7 @@ export function AuthProvider({ children }) {
     try {
       await authService.logout();
     } finally {
+      localStorage.removeItem('resqtag_token');
       setUser(null);
       setQr(null);
     }

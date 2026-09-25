@@ -6,8 +6,7 @@ export async function authenticate(req, res, next) {
   try {
     let token = req.cookies?.resqtag_token;
 
-    // Also support Authorization header for mobile/API clients
-    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
       token = req.headers.authorization.split(' ')[1];
     }
 
