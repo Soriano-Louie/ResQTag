@@ -108,7 +108,7 @@ export async function runMigrations() {
 
       // Seed admin QR tag
       const adminQrToken = 'admin8f92a71c4d9e984b2361093a8901';
-      await connection.query('INSERT IGNORE INTO qr_tags (user_id, qr_token, status) VALUES (?, ?, "active")', [adminId, adminQrToken]);
+      await connection.query("INSERT IGNORE INTO qr_tags (user_id, qr_token, status) VALUES (?, ?, 'active')", [adminId, adminQrToken]);
 
       console.log('👤 Created default admin account: admin@resqtag.com / Admin@123456');
     }

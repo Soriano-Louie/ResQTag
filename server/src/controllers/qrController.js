@@ -13,7 +13,7 @@ export async function getQR(req, res) {
     if (rows.length === 0) {
       // Create one if missing
       const token = generateSecureQRToken();
-      await pool.query('INSERT INTO qr_tags (user_id, qr_token, status) VALUES (?, ?, "active")', [userId, token]);
+      await pool.query('INSERT INTO qr_tags (user_id, qr_token, status) VALUES (?, ?, ?)', [userId, token, 'active']);
       return res.json({
         qr: {
           qr_token: token,
@@ -65,14 +65,14 @@ export async function regenerateQR(req, res) {
     const newToken = generateSecureQRToken();
 
     const [result] = await pool.query(
-      'UPDATE qr_tags SET qr_token = ?, scan_count = 0, last_scanned_at = NULL, status = "active" WHERE user_id = ?',
-      [newToken, userId]
+      'UPDATE qr_tags SET qr_token = ?, scan_count = 0, last_scanned_at = NULL, status = ? WHERE user_id = ?',
+      [newToken, 'active', userId]
     );
 
     if (result.affectedRows === 0) {
       await pool.query(
-        'INSERT INTO qr_tags (user_id, qr_token, status) VALUES (?, ?, "active")',
-        [userId, newToken]
+        'INSERT INTO qr_tags (user_id, qr_token, status) VALUES (?, ?, ?)',
+        [userId, newToken, 'active']
       );
     }
 

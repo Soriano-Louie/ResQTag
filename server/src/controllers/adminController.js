@@ -2,8 +2,8 @@ import pool from '../config/db.js';
 
 export async function getAdminStats(req, res) {
   try {
-    const [[{ totalUsers }]] = await pool.query('SELECT COUNT(*) AS totalUsers FROM users WHERE role = "user"');
-    const [[{ activeTags }]] = await pool.query('SELECT COUNT(*) AS activeTags FROM qr_tags WHERE status = "active"');
+    const [[{ totalUsers }]] = await pool.query("SELECT COUNT(*) AS totalUsers FROM users WHERE role = 'user'");
+    const [[{ activeTags }]] = await pool.query("SELECT COUNT(*) AS activeTags FROM qr_tags WHERE status = 'active'");
     const [[{ totalScans }]] = await pool.query('SELECT COALESCE(SUM(scan_count), 0) AS totalScans FROM qr_tags');
 
     return res.json({

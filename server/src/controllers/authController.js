@@ -194,8 +194,8 @@ export async function getMe(req, res) {
     if (qrRows.length === 0) {
       const newToken = generateSecureQRToken();
       await pool.query(
-        'INSERT INTO qr_tags (user_id, qr_token, status) VALUES (?, ?, "active")',
-        [req.user.user_id, newToken]
+        'INSERT INTO qr_tags (user_id, qr_token, status) VALUES (?, ?, ?)',
+        [req.user.user_id, newToken, 'active']
       );
       qrRows = [{ qr_token: newToken, status: 'active', scan_count: 0, last_scanned_at: null }];
     }
