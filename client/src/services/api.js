@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+const rawBase = import.meta.env.VITE_API_URL || '';
+const normalizedBase = rawBase
+  ? (rawBase.endsWith('/api') ? rawBase : `${rawBase.replace(/\/+$/, '')}/api`)
+  : '/api';
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: normalizedBase,
   withCredentials: true, // Send HTTP-only cookie automatically
   headers: {
     'Content-Type': 'application/json'

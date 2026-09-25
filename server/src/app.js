@@ -56,8 +56,9 @@ app.get('/', (req, res) => {
   });
 });
 
-// API Routes
+// API Routes (Mounted under /api as well as root for flexibility)
 app.use('/api', routes);
+app.use('/', routes);
 
 // Error Handling
 app.use(notFound);
