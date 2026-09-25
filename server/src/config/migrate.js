@@ -31,7 +31,7 @@ export async function runMigrations() {
         contact_number VARCHAR(30) NULL,
         address TEXT NULL,
         date_of_birth DATE NULL,
-        blood_type VARCHAR(10) NULL,
+        blood_type VARCHAR(50) NULL,
         allergies TEXT NULL,
         medical_conditions TEXT NULL,
         medications TEXT NULL,
@@ -43,6 +43,13 @@ export async function runMigrations() {
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    // Ensure blood_type has sufficient length in existing databases
+    try {
+      await connection.query(`ALTER TABLE emergency_profiles MODIFY COLUMN blood_type VARCHAR(50) NULL;`);
+    } catch (e) {
+      // Ignore if column already matches or table freshly created
+    }
 
     // 3. Emergency contacts table
     await connection.query(`
