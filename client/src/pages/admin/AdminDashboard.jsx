@@ -42,8 +42,9 @@ export default function AdminDashboard() {
   const [orderTotalPages, setOrderTotalPages] = useState(1);
   const [loadingOrders, setLoadingOrders] = useState(true);
 
-  // Print Modal State
-  const [selectedPrintOrderId, setSelectedPrintOrderId] = useState(null);
+  // Print Modal State & Batch Selection
+  const [selectedPrintOrderIds, setSelectedPrintOrderIds] = useState(null);
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
 
   // Load User Data
   const loadUserData = async () => {
@@ -306,6 +307,36 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          {/* Batch Print Actions Toolbar (When 1 or more orders are checked) */}
+          {selectedOrderIds.length > 0 && (
+            <div className="mx-6 mb-2 p-3 px-4 bg-rose-50 border border-rose-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-pulse" />
+                <span className="font-bold text-slate-900">
+                  {selectedOrderIds.length} {selectedOrderIds.length === 1 ? 'Order' : 'Orders'} Selected
+                </span>
+                <span className="text-slate-500 hidden sm:inline">
+                  • Ready for continuous paper-efficient batch printing
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedPrintOrderIds(selectedOrderIds)}
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  Batch Print Selected ({selectedOrderIds.length})
+                </button>
+                <button
+                  onClick={() => setSelectedOrderIds([])}
+                  className="px-3 py-1.5 text-slate-600 hover:bg-rose-100/70 rounded-xl font-semibold transition-colors"
+                >
+                  Clear Selection
+                </button>
+              </div>
+            </div>
+          )}
+
           {loadingOrders ? (
             <div className="p-12 flex justify-center">
               <Loader2 className="w-8 h-8 text-brand-600 animate-spin" />
@@ -321,6 +352,21 @@ export default function AdminDashboard() {
               <table className="w-full text-left text-xs text-slate-600">
                 <thead className="bg-slate-50 border-b border-slate-200 uppercase font-bold text-slate-500 text-[10px]">
                   <tr>
+                    <th className="p-4 w-10">
+                      <input
+                        type="checkbox"
+                        checked={orders.length > 0 && selectedOrderIds.length === orders.length}
+                        onChange={() => {
+                          if (selectedOrderIds.length === orders.length) {
+                            setSelectedOrderIds([]);
+                          } else {
+                            setSelectedOrderIds(orders.map((o) => o.order_id));
+                          }
+                        }}
+                        className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer w-4 h-4"
+                        title="Select All Orders"
+                      />
+                    </th>
                     <th className="p-4">Order ID</th>
                     <th className="p-4">Customer & Recipient</th>
                     <th className="p-4">Format</th>
@@ -333,7 +379,27 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {orders.map((order) => (
-                    <tr key={order.order_id} className="hover:bg-slate-50/60 transition-colors">
+                    <tr
+                      key={order.order_id}
+                      className={`hover:bg-slate-50/60 transition-colors ${
+                        selectedOrderIds.includes(order.order_id) ? 'bg-rose-50/30' : ''
+                      }`}
+                    >
+                      <td className="p-4 w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedOrderIds.includes(order.order_id)}
+                          onChange={() => {
+                            setSelectedOrderIds((prev) =>
+                              prev.includes(order.order_id)
+                                ? prev.filter((id) => id !== order.order_id)
+                                : [...prev, order.order_id]
+                            );
+                          }}
+                          className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer w-4 h-4"
+                        />
+                      </td>
+
                       <td className="p-4 font-mono font-bold text-slate-900">
                         #{order.order_id}
                       </td>
@@ -372,7 +438,7 @@ export default function AdminDashboard() {
                       <td className="p-4 text-right space-x-2">
                         {/* Print Button */}
                         <button
-                          onClick={() => setSelectedPrintOrderId(order.order_id)}
+                          onClick={() => setSelectedPrintOrderIds([order.order_id])}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-[11px] shadow transition-all"
                         >
                           <Printer className="w-3.5 h-3.5" />
@@ -565,11 +631,14 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Admin Print Modal */}
-      {selectedPrintOrderId && (
+      {/* Admin Print Modal (Single or Batch) */}
+      {selectedPrintOrderIds && selectedPrintOrderIds.length > 0 && (
         <AdminPrintModal
-          orderId={selectedPrintOrderId}
-          onClose={() => setSelectedPrintOrderId(null)}
+          orderIds={selectedPrintOrderIds}
+          onClose={() => {
+            setSelectedPrintOrderIds(null);
+            setSelectedOrderIds([]);
+          }}
           onStatusUpdated={loadOrdersData}
         />
       )}
