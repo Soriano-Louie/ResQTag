@@ -5,8 +5,8 @@ export async function getPublicEmergencyProfile(req, res) {
   try {
     const { token } = req.params;
 
-    if (!token || typeof token !== 'string' || token.length < 8) {
-      return res.status(400).json({ message: 'Invalid ResQTag emergency token.' });
+    if (!token || typeof token !== 'string' || !/^[a-zA-Z0-9_-]{16,64}$/.test(token.trim())) {
+      return res.status(400).json({ message: 'Invalid ResQTag emergency token format.' });
     }
 
     // 1. Fetch QR Tag Record

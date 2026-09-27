@@ -5,14 +5,42 @@ import cookieParser from 'cookie-parser';
 import { config } from './config/env.js';
 import routes from './routes/index.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
+import { generalLimiter } from './middleware/rateLimiter.js';
+import { sanitizeInputs } from './middleware/sanitize.js';
 
 const app = express();
 
 // Trust proxy for Render / Cloud reverse proxies (critical for secure cookies & rate limiters)
 app.set('trust proxy', 1);
 
-// Security Headers
-app.use(helmet());
+// Enhanced Security Headers via Helmet
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+      connectSrc: ["'self'", 'https:', 'http://localhost:*']
+    }
+  },
+  frameguard: { action: 'deny' }, // Clickjacking protection
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }, // Enforce HTTPS
+  noSniff: true, // Prevent MIME type sniffing
+  xssFilter: true // Enable XSS filter
+}));
+
+// Additional Defensive Security Headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  next();
+});
 
 // CORS configuration for Cross-Origin Credentials
 const allowedOrigins = [
@@ -41,10 +69,16 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Body parsing & Cookie parsing
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+// Body parsing & Cookie parsing (with conservative payload size limits)
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(cookieParser());
+
+// Input Sanitization (protects against script injections and HTML payloads in data inputs)
+app.use(sanitizeInputs);
+
+// General Rate Limiter (applies to all endpoints)
+app.use(generalLimiter);
 
 // Base Route
 app.get('/', (req, res) => {

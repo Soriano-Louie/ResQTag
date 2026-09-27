@@ -35,8 +35,10 @@ export async function updatePrivacySettings(req, res) {
 
     await connection.beginTransaction();
 
+    const validFields = Object.keys(DEFAULT_PRIVACY_FIELDS);
     const entries = Object.entries(settings);
     for (const [field, isPublic] of entries) {
+      if (!validFields.includes(field)) continue; // Whitelist security validation
       const publicVal = isPublic ? 1 : 0;
       await connection.query(
         `INSERT INTO privacy_settings (user_id, field_name, is_public) 

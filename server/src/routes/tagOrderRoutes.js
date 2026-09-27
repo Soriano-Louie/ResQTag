@@ -10,13 +10,14 @@ import {
 } from '../controllers/tagOrderController.js';
 import { authenticate } from '../middleware/authMiddleware.js';
 import { requireAdmin } from '../middleware/adminMiddleware.js';
+import { orderLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
 // User endpoints
-router.post('/', authenticate, createOrder);
+router.post('/', authenticate, orderLimiter, createOrder);
 router.get('/my-orders', authenticate, getMyOrders);
-router.put('/:id/cancel', authenticate, cancelOrder);
+router.put('/:id/cancel', authenticate, orderLimiter, cancelOrder);
 
 // Admin endpoints
 router.get('/admin', authenticate, requireAdmin, getAdminOrders);

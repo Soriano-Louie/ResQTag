@@ -171,8 +171,10 @@ export async function cancelOrder(req, res) {
  */
 export async function getAdminOrders(req, res) {
   try {
-    const { status, search, dateFilter, startDate, endDate, page = 1, limit = 20 } = req.query;
-    const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const { status, search, dateFilter, startDate, endDate, page = 1, limit = 10 } = req.query;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
+    const offset = (pageNum - 1) * limitNum;
 
     let whereClauses = [];
     let queryParams = [];
@@ -254,7 +256,7 @@ export async function getAdminOrders(req, res) {
          ${whereSql}
          ORDER BY o.created_at DESC
          LIMIT ? OFFSET ?`,
-        [...queryParams, parseInt(limit, 10), offset]
+        [...queryParams, limitNum, offset]
       );
       orders = rows;
     } catch (dbErr) {
@@ -287,7 +289,7 @@ export async function getAdminOrders(req, res) {
            ${whereSql}
            ORDER BY o.created_at DESC
            LIMIT ? OFFSET ?`,
-          [...queryParams, parseInt(limit, 10), offset]
+          [...queryParams, limitNum, offset]
         );
         orders = rows;
       } else {
@@ -309,10 +311,10 @@ export async function getAdminOrders(req, res) {
       orders,
       counts: statusCounts[0] || { pendingCount: 0, processingCount: 0, printedCount: 0, deliveredCount: 0 },
       pagination: {
-        page: parseInt(page, 10),
-        limit: parseInt(limit, 10),
+        page: pageNum,
+        limit: limitNum,
         totalOrders,
-        totalPages: Math.ceil(totalOrders / parseInt(limit, 10))
+        totalPages: Math.ceil(totalOrders / limitNum)
       }
     });
   } catch (error) {
@@ -332,15 +334,23 @@ export async function batchUpdateOrderStatus(req, res) {
       return res.status(400).json({ message: 'orderIds must be a non-empty array.' });
     }
 
+    const cleanIds = orderIds
+      .map(id => parseInt(id, 10))
+      .filter(id => !isNaN(id) && id > 0);
+
+    if (cleanIds.length === 0) {
+      return res.status(400).json({ message: 'Valid integer order IDs are required.' });
+    }
+
     const validStatuses = ['pending', 'processing', 'printed', 'delivered', 'cancelled'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
     }
 
-    const placeholders = orderIds.map(() => '?').join(', ');
+    const placeholders = cleanIds.map(() => '?').join(', ');
     const [result] = await pool.query(
       `UPDATE tag_orders SET order_status = ? WHERE order_id IN (${placeholders})`,
-      [status, ...orderIds]
+      [status, ...cleanIds]
     );
 
     return res.json({

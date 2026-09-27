@@ -22,7 +22,9 @@ export async function getAdminStats(req, res) {
 export async function getUsers(req, res) {
   try {
     const { search = '', page = 1, limit = 20 } = req.query;
-    const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const offset = (pageNum - 1) * limitNum;
     const searchPattern = `%${search.trim()}%`;
 
     const [users] = await pool.query(
@@ -34,7 +36,7 @@ export async function getUsers(req, res) {
        WHERE u.email LIKE ? OR u.first_name LIKE ? OR u.last_name LIKE ?
        ORDER BY u.created_at DESC
        LIMIT ? OFFSET ?`,
-      [searchPattern, searchPattern, searchPattern, parseInt(limit, 10), offset]
+      [searchPattern, searchPattern, searchPattern, limitNum, offset]
     );
 
     const [[{ totalCount }]] = await pool.query(
@@ -46,10 +48,10 @@ export async function getUsers(req, res) {
     return res.json({
       users,
       pagination: {
-        page: parseInt(page, 10),
-        limit: parseInt(limit, 10),
+        page: pageNum,
+        limit: limitNum,
         total: totalCount,
-        totalPages: Math.ceil(totalCount / parseInt(limit, 10))
+        totalPages: Math.ceil(totalCount / limitNum)
       }
     });
   } catch (error) {
