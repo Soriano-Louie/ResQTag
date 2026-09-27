@@ -37,9 +37,9 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
               <span className="text-[10px] text-slate-400 font-normal">Cut along dashed line</span>
             </div>
 
-            {/* Outer dashed cut border */}
+            {/* Outer dashed cut border (Sharp corners for accurate cutting) */}
             <div
-              className="border-2 border-dashed border-slate-700 rounded-2xl bg-white flex justify-around items-center mx-auto"
+              className="border-2 border-dashed border-slate-700 bg-white flex justify-around items-center mx-auto"
               style={{ width: 'fit-content', padding: '5px', gap: '4px' }}
             >
               {/* ── Keychain FRONT ── 3.0 × 3.0 cm ── */}
@@ -123,7 +123,7 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
               <span className="text-[10px] text-slate-400 font-normal">Cut along dashed line</span>
             </div>
 
-            <div className="border-2 border-dashed border-slate-700 rounded-2xl p-4 bg-white flex flex-col sm:flex-row justify-center items-center gap-6">
+            <div className="border-2 border-dashed border-slate-700 p-4 bg-white flex flex-col sm:flex-row justify-center items-center gap-6">
               {/* Card Front */}
               <div className="w-72 h-44 rounded-xl flex flex-col bg-white relative overflow-hidden border border-slate-100">
                 {/* Red Thick Top Bar */}
