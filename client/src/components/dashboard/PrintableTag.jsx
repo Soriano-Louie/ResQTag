@@ -41,7 +41,7 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
             >
               {/* ── Keychain FRONT ── 3.0 × 3.0 cm ── */}
               <div
-                className="border border-slate-300 rounded-lg bg-white shadow-sm flex flex-col items-center justify-center text-center overflow-hidden"
+                className="bg-white flex flex-col items-center justify-center text-center overflow-hidden"
                 style={{ width: '3.0cm', height: '3.0cm', padding: '1.5mm', boxSizing: 'border-box', gap: '1.5mm' }}
               >
                 {/* Brand */}
@@ -72,7 +72,7 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
 
               {/* ── Keychain BACK ── 3.0 × 3.0 cm ── */}
               <div
-                className="border border-slate-300 rounded-lg bg-white text-black shadow-sm flex flex-col items-center justify-center text-center overflow-hidden"
+                className="bg-white text-black flex flex-col items-center justify-center text-center overflow-hidden"
                 style={{ width: '3.0cm', height: '3.0cm', padding: '1.5mm', boxSizing: 'border-box', gap: '1.5mm' }}
               >
                 {/* Name block */}
@@ -122,7 +122,7 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
 
             <div className="border-2 border-dashed border-slate-700 rounded-2xl p-4 bg-white flex flex-col sm:flex-row justify-center items-center gap-6">
               {/* Card Front */}
-              <div className="w-72 h-44 border border-slate-300 rounded-xl p-3.5 flex flex-col justify-between bg-white shadow-sm">
+              <div className="w-72 h-44 rounded-xl p-3.5 flex flex-col justify-between bg-white">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
                   <div className="flex items-center gap-1 text-rose-700 font-black text-xs uppercase tracking-wider">
                     <HeartPulse className="w-4 h-4" />
@@ -153,7 +153,7 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
               </div>
 
               {/* Card Back */}
-              <div className="w-72 h-44 border border-slate-300 rounded-xl p-3.5 flex flex-col justify-between bg-slate-900 text-white shadow-sm">
+              <div className="w-72 h-44 rounded-xl p-3.5 flex flex-col justify-between bg-slate-900 text-white">
                 <div className="flex items-center justify-between border-b border-slate-700 pb-1.5">
                   <span className="text-[9px] font-mono tracking-widest text-rose-400 font-bold uppercase">
                     FIRST RESPONDER INSTRUCTIONS
