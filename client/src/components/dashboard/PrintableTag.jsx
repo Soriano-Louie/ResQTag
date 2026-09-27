@@ -188,8 +188,8 @@ export default function PrintableTag({ qr, user, tagType = 'bundle', quantity = 
                       WebkitColumnBreakInside: 'avoid',
                     }}
                   >
-                    {/* Card Front */}
-                    <div className="w-72 h-44 rounded-xl flex flex-col bg-white relative overflow-hidden border border-slate-100">
+                    {/* Card Front (Sharp corners) */}
+                    <div className="w-72 h-44 flex flex-col bg-white relative overflow-hidden border border-slate-100">
                       {/* Red Thick Top Bar */}
                       <div className="bg-rose-600 px-3 py-2 flex items-center gap-2 text-white shrink-0">
                         <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center shrink-0 shadow-xs">
@@ -263,8 +263,8 @@ export default function PrintableTag({ qr, user, tagType = 'bundle', quantity = 
                       </div>
                     </div>
 
-                    {/* Card Back */}
-                    <div className="w-72 h-44 rounded-xl flex flex-col justify-between bg-white text-slate-900 relative overflow-hidden border border-slate-100">
+                    {/* Card Back (Sharp corners) */}
+                    <div className="w-72 h-44 flex flex-col justify-between bg-white text-slate-900 relative overflow-hidden border border-slate-100">
                       {/* Red Thick Top Bar */}
                       <div className="bg-rose-600 px-3 py-2 flex items-center gap-2 text-white shrink-0">
                         <ShieldAlert className="w-4 h-4 text-white shrink-0" />
