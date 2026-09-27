@@ -80,12 +80,12 @@ export default function AdminPrintModal({ orderId, orderIds, onClose, onStatusUp
   );
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto print:static print:inset-auto print:bg-white print:p-0 print:m-0 print:overflow-visible print:z-auto print:block">
       {/* Printable Sheet (Active on browser print dialog) */}
       {!loading && items.length > 0 && <PrintableTag items={items} />}
 
       {/* Screen Preview Modal Dialog (Hidden on Print) */}
-      <div className="no-print bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 relative my-8">
+      <div className="no-print print:hidden bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 relative my-8">
         <button
           onClick={onClose}
           className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"

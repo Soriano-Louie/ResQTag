@@ -173,8 +173,9 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Top Banner */}
+    <>
+      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 ${selectedPrintOrderIds ? 'print:hidden' : ''}`}>
+        {/* Top Banner */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 text-white p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-sm">
         <div className="flex items-center gap-3.5">
           <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
@@ -630,6 +631,7 @@ export default function AdminDashboard() {
           )}
         </div>
       )}
+      </div>
 
       {/* Admin Print Modal (Single or Batch) */}
       {selectedPrintOrderIds && selectedPrintOrderIds.length > 0 && (
@@ -642,6 +644,6 @@ export default function AdminDashboard() {
           onStatusUpdated={loadOrdersData}
         />
       )}
-    </div>
+    </>
   );
 }
