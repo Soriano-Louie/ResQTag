@@ -105,7 +105,7 @@ export default function PrintableTag({ qr, user, tagType = 'bundle', quantity = 
                         style={{ fontSize: '5.5pt' }}
                       >
                         <ShieldAlert className="text-rose-700" style={{ width: '6.5pt', height: '6.5pt' }} />
-                        <span className="text-rose-700">ResQ</span><span className="text-black">Tag</span>
+                        <span className="tracking-tight"><span className="text-rose-700">ResQ</span><span className="text-black">Tag</span></span>
                       </div>
 
                       {/* QR Code */}
