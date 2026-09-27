@@ -120,6 +120,48 @@ export async function getMyOrders(req, res) {
   }
 }
 
+/**
+ * User cancels their own order (only if still pending)
+ */
+export async function cancelOrder(req, res) {
+  try {
+    const userId = req.user.user_id;
+    const { id } = req.params;
+
+    // Fetch the order and verify it belongs to this user
+    const [rows] = await pool.query(
+      'SELECT order_id, order_status FROM tag_orders WHERE order_id = ? AND user_id = ?',
+      [id, userId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Order not found.' });
+    }
+
+    const order = rows[0];
+
+    // Only allow cancellation if still pending
+    if (order.order_status !== 'pending') {
+      return res.status(400).json({
+        message: `Order cannot be cancelled because it is already "${order.order_status}". Only pending orders can be cancelled.`
+      });
+    }
+
+    await pool.query(
+      'UPDATE tag_orders SET order_status = ? WHERE order_id = ?',
+      ['cancelled', id]
+    );
+
+    return res.json({
+      message: `Order #${id} has been cancelled.`,
+      orderStatus: 'cancelled'
+    });
+  } catch (error) {
+    console.error('cancelOrder error:', error);
+    return res.status(500).json({ message: 'Failed to cancel order.', error: error.message });
+  }
+}
+
 // ==========================================
 // ADMIN CONTROLLERS
 // ==========================================

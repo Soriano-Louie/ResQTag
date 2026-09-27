@@ -2,6 +2,7 @@ import express from 'express';
 import {
   createOrder,
   getMyOrders,
+  cancelOrder,
   getAdminOrders,
   updateOrderStatus,
   getOrderPrintData
@@ -14,6 +15,7 @@ const router = express.Router();
 // User endpoints
 router.post('/', authenticate, createOrder);
 router.get('/my-orders', authenticate, getMyOrders);
+router.put('/:id/cancel', authenticate, cancelOrder);
 
 // Admin endpoints
 router.get('/admin', authenticate, requireAdmin, getAdminOrders);

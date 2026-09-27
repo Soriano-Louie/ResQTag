@@ -15,7 +15,9 @@ import {
   Info,
   Calendar,
   MapPin,
-  Loader2
+  Loader2,
+  XCircle,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function QRPage() {
@@ -23,6 +25,9 @@ export default function QRPage() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
+  const [cancelConfirm, setCancelConfirm] = useState(null); // orderId awaiting confirm
+  const [cancelling, setCancelling] = useState(null);       // orderId currently being cancelled
+  const [cancelError, setCancelError] = useState(null);
 
   const loadData = async () => {
     try {
@@ -42,6 +47,20 @@ export default function QRPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleCancelOrder = async (orderId) => {
+    setCancelling(orderId);
+    setCancelError(null);
+    try {
+      await tagOrderService.cancelOrder(orderId);
+      setCancelConfirm(null);
+      await loadData(); // refresh orders
+    } catch (err) {
+      setCancelError(err?.response?.data?.message || 'Failed to cancel order.');
+    } finally {
+      setCancelling(null);
+    }
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -67,6 +86,12 @@ export default function QRPage() {
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
             <Truck className="w-3.5 h-3.5 text-emerald-600" /> Delivered
+          </span>
+        );
+      case 'cancelled':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase bg-red-100 text-red-700 border border-red-200">
+            <XCircle className="w-3.5 h-3.5 text-red-600" /> Cancelled
           </span>
         );
       default:
@@ -158,6 +183,51 @@ export default function QRPage() {
                   {order.notes && (
                     <div className="text-[11px] text-slate-500 bg-white p-2 rounded-xl border border-slate-200/60">
                       <strong>Delivery Notes:</strong> {order.notes}
+                    </div>
+                  )}
+
+                  {/* Cancel button — only for pending orders */}
+                  {order.order_status === 'pending' && (
+                    <div className="pt-1">
+                      {cancelConfirm === order.order_id ? (
+                        <div className="flex flex-col gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
+                          <div className="flex items-center gap-2 text-xs font-bold text-red-700">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                            Are you sure you want to cancel this order? This cannot be undone.
+                          </div>
+                          {cancelError && (
+                            <p className="text-[11px] text-red-600">{cancelError}</p>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleCancelOrder(order.order_id)}
+                              disabled={cancelling === order.order_id}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors disabled:opacity-60"
+                            >
+                              {cancelling === order.order_id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <XCircle className="w-3 h-3" />
+                              )}
+                              Yes, Cancel Order
+                            </button>
+                            <button
+                              onClick={() => { setCancelConfirm(null); setCancelError(null); }}
+                              className="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-300 transition-colors"
+                            >
+                              Keep Order
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setCancelConfirm(order.order_id)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 bg-white text-red-600 text-xs font-bold hover:bg-red-50 transition-colors"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          Cancel Order
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

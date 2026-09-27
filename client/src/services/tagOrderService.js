@@ -12,6 +12,11 @@ export const tagOrderService = {
     return res.data;
   },
 
+  async cancelOrder(orderId) {
+    const res = await api.put(`/tag-orders/${orderId}/cancel`);
+    return res.data;
+  },
+
   // Admin APIs
   async getAdminOrders(params) {
     const res = await api.get('/tag-orders/admin', { params });

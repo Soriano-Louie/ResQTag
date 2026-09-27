@@ -18,7 +18,8 @@ import {
   Clock,
   Sparkles,
   Truck,
-  Filter
+  Filter,
+  XCircle
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -161,6 +162,12 @@ export default function AdminDashboard() {
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
             <Truck className="w-3 h-3 text-emerald-600" /> Delivered
+          </span>
+        );
+      case 'cancelled':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-red-100 text-red-700 border border-red-200">
+            <XCircle className="w-3 h-3 text-red-600" /> Cancelled
           </span>
         );
       default:
