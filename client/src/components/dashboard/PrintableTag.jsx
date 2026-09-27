@@ -60,7 +60,7 @@ export default function PrintableTag({ qr, user, tagType = 'bundle', quantity = 
             </>
           ) : (
             <>
-              Target: <strong>{user?.firstName} {user?.lastName}</strong> • Format: <strong>{tagType === 'bundle' ? 'Complete Kit (Keychain + Card)' : tagType === 'keychain' ? 'Acrylic Keychain Tag' : 'Emergency Wallet Card'}</strong> • Token: <span className="font-mono font-bold">RQ-{qr.qr_token.slice(0, 8).toUpperCase()}</span>
+              Target: <strong>{allTags[0]?.user?.firstName || user?.firstName} {allTags[0]?.user?.lastName || user?.lastName}</strong> • Format: <strong>{(allTags[0]?.tagType || tagType) === 'bundle' ? 'Complete Kit (Keychain + Card)' : (allTags[0]?.tagType || tagType) === 'keychain' ? 'Acrylic Keychain Tag' : 'Emergency Wallet Card'}</strong> • Token: <span className="font-mono font-bold">RQ-{(allTags[0]?.qr?.qr_token || qr?.qr_token || '').slice(0, 8).toUpperCase()}</span>
             </>
           )}
         </p>

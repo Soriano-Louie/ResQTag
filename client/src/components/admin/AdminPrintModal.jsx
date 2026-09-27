@@ -164,24 +164,24 @@ export default function AdminPrintModal({ orderId, orderIds, onClose, onStatusUp
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 block">Customer</span>
                       <span className="font-bold text-slate-900 text-sm">
-                        {ordersData[0].first_name} {ordersData[0].last_name}
+                        {ordersData[0]?.first_name} {ordersData[0]?.last_name}
                       </span>
-                      <span className="text-slate-500 block">{ordersData[0].email}</span>
+                      <span className="text-slate-500 block">{ordersData[0]?.email}</span>
                     </div>
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 block">Recipient & Phone</span>
-                      <span className="font-bold text-slate-900">{ordersData[0].recipient_name}</span>
-                      <span className="text-slate-500 block">{ordersData[0].contact_number}</span>
+                      <span className="font-bold text-slate-900">{ordersData[0]?.recipient_name}</span>
+                      <span className="text-slate-500 block">{ordersData[0]?.contact_number}</span>
                     </div>
                     <div className="col-span-2 pt-2 border-t border-slate-200/60 flex items-center justify-between">
                       <div>
                         <span className="text-[10px] uppercase font-bold text-slate-400 block">Shipping Address</span>
-                        <span className="font-medium text-slate-800">{ordersData[0].shipping_address}</span>
+                        <span className="font-medium text-slate-800">{ordersData[0]?.shipping_address}</span>
                       </div>
                       <div className="text-right">
                         <span className="text-[10px] uppercase font-bold text-slate-400 block">Requested Format</span>
                         <span className="font-black text-xs text-rose-600 uppercase">
-                          {ordersData[0].tag_type === 'keychain' ? '🔑 Keychain Tag' : ordersData[0].tag_type === 'wallet_card' ? '💳 Wallet Card' : '⭐ Complete Kit'}
+                          {ordersData[0]?.tag_type === 'keychain' ? '🔑 Keychain Tag' : ordersData[0]?.tag_type === 'wallet_card' ? '💳 Wallet Card' : '⭐ Complete Kit'}
                         </span>
                       </div>
                     </div>
@@ -192,11 +192,11 @@ export default function AdminPrintModal({ orderId, orderIds, onClose, onStatusUp
                       <span className="text-[10px] font-mono text-rose-400 font-bold block uppercase tracking-widest">
                         TAG TOKEN ENCODING
                       </span>
-                      <span className="font-mono text-xs text-slate-200">{ordersData[0].qr_token}</span>
+                      <span className="font-mono text-xs text-slate-200">{ordersData[0]?.qr_token}</span>
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] uppercase text-slate-400 block">Quantity</span>
-                      <span className="font-black text-lg text-rose-400">{ordersData[0].quantity}x</span>
+                      <span className="font-black text-lg text-rose-400">{ordersData[0]?.quantity}x</span>
                     </div>
                   </div>
                 </div>
