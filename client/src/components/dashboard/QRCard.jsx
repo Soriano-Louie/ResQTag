@@ -228,7 +228,7 @@ export default function QRCard({ qr, user, onQRUpdated }) {
                   level="H"
                   includeMargin={true}
                   imageSettings={{
-                    src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='sg' x1='0' y1='0' x2='0' y2='1'><stop offset='0%25' stop-color='%23f43f5e'/><stop offset='100%25' stop-color='%23be123c'/></linearGradient></defs><rect width='100' height='100' rx='22' ry='22' fill='url(%23sg)'/><path d='M50 10 C50 10 20 22 20 40 L20 58 C20 74 50 90 50 90 C50 90 80 74 80 58 L80 40 C80 22 50 10 50 10Z' fill='white' fill-opacity='0.18'/><text x='50' y='72' font-family='Arial Black,sans-serif' font-weight='900' font-size='52' text-anchor='middle' fill='white'>!</text></svg>",
+                    src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e11d48' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z'/><path d='M12 8v4'/><path d='M12 16h.01'/></svg>",
                     x: undefined,
                     y: undefined,
                     height: 36,
