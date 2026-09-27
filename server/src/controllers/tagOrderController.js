@@ -171,7 +171,7 @@ export async function cancelOrder(req, res) {
  */
 export async function getAdminOrders(req, res) {
   try {
-    const { status, search, page = 1, limit = 20 } = req.query;
+    const { status, search, dateFilter, startDate, endDate, page = 1, limit = 20 } = req.query;
     const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
     let whereClauses = [];
@@ -186,6 +186,32 @@ export async function getAdminOrders(req, res) {
       whereClauses.push('(o.recipient_name LIKE ? OR u.email LIKE ? OR o.contact_number LIKE ?)');
       const searchTerm = `%${search.trim()}%`;
       queryParams.push(searchTerm, searchTerm, searchTerm);
+    }
+
+    // Date Presets
+    if (dateFilter && dateFilter !== 'all') {
+      if (dateFilter === 'today') {
+        whereClauses.push('DATE(o.created_at) = CURDATE()');
+      } else if (dateFilter === 'yesterday') {
+        whereClauses.push('DATE(o.created_at) = CURDATE() - INTERVAL 1 DAY');
+      } else if (dateFilter === 'last_7_days') {
+        whereClauses.push('o.created_at >= NOW() - INTERVAL 7 DAY');
+      } else if (dateFilter === 'last_30_days') {
+        whereClauses.push('o.created_at >= NOW() - INTERVAL 30 DAY');
+      } else if (dateFilter === 'this_month') {
+        whereClauses.push('o.created_at >= DATE_FORMAT(NOW(), "%Y-%m-01 00:00:00")');
+      }
+    }
+
+    // Custom Start / End Dates (YYYY-MM-DD)
+    if (startDate && startDate.trim()) {
+      whereClauses.push('o.created_at >= ?');
+      queryParams.push(`${startDate.trim()} 00:00:00`);
+    }
+
+    if (endDate && endDate.trim()) {
+      whereClauses.push('o.created_at <= ?');
+      queryParams.push(`${endDate.trim()} 23:59:59`);
     }
 
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';

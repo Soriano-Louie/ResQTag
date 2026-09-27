@@ -17,13 +17,17 @@ import {
   MapPin,
   Loader2,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export default function QRPage() {
   const { user, qr, setQr } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
+  const [orderPage, setOrderPage] = useState(1);
+  const userOrdersPerPage = 5;
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [cancelConfirm, setCancelConfirm] = useState(null); // orderId awaiting confirm
   const [cancelling, setCancelling] = useState(null);       // orderId currently being cancelled
@@ -151,7 +155,9 @@ export default function QRPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {orders.map((order) => (
+              {orders
+                .slice((orderPage - 1) * userOrdersPerPage, orderPage * userOrdersPerPage)
+                .map((order) => (
                 <div
                   key={order.order_id}
                   className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-slate-300 transition-all space-y-3"
@@ -232,6 +238,46 @@ export default function QRPage() {
                   )}
                 </div>
               ))}
+
+              {/* User Order Pagination */}
+              {Math.ceil(orders.length / userOrdersPerPage) > 1 && (
+                <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
+                  <span>
+                    Showing {(orderPage - 1) * userOrdersPerPage + 1}–{Math.min(orderPage * userOrdersPerPage, orders.length)} of {orders.length}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      disabled={orderPage <= 1}
+                      onClick={() => setOrderPage((p) => Math.max(1, p - 1))}
+                      className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      title="Previous Page"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    {Array.from({ length: Math.ceil(orders.length / userOrdersPerPage) }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={`user-order-page-${pageNum}`}
+                        onClick={() => setOrderPage(pageNum)}
+                        className={`min-w-[28px] h-7 px-2 rounded-lg font-bold text-xs transition-all ${
+                          orderPage === pageNum
+                            ? 'bg-brand-600 text-white shadow-sm'
+                            : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                    <button
+                      disabled={orderPage >= Math.ceil(orders.length / userOrdersPerPage)}
+                      onClick={() => setOrderPage((p) => Math.min(Math.ceil(orders.length / userOrdersPerPage), p + 1))}
+                      className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      title="Next Page"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

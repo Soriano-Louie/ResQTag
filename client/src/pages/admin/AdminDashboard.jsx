@@ -19,7 +19,10 @@ import {
   Sparkles,
   Truck,
   Filter,
-  XCircle
+  XCircle,
+  Calendar,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -38,9 +41,14 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState([]);
   const [orderCounts, setOrderCounts] = useState({ pendingCount: 0, processingCount: 0, printedCount: 0, deliveredCount: 0 });
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [orderDateFilter, setOrderDateFilter] = useState('all');
+  const [orderStartDate, setOrderStartDate] = useState('');
+  const [orderEndDate, setOrderEndDate] = useState('');
   const [orderSearch, setOrderSearch] = useState('');
   const [orderPage, setOrderPage] = useState(1);
+  const [orderLimit, setOrderLimit] = useState(10);
   const [orderTotalPages, setOrderTotalPages] = useState(1);
+  const [orderTotalOrders, setOrderTotalOrders] = useState(0);
   const [loadingOrders, setLoadingOrders] = useState(true);
 
   // Print Modal State & Batch Selection
@@ -48,6 +56,20 @@ export default function AdminDashboard() {
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
   const [batchStatusValue, setBatchStatusValue] = useState('processing');
   const [batchUpdating, setBatchUpdating] = useState(false);
+
+  // Helper for numbered pagination buttons with windowing
+  const getPageNumbers = (currentPage, totalPages) => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, 5, '...', totalPages];
+    }
+    if (currentPage >= totalPages - 3) {
+      return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+  };
 
   // Load User Data
   const loadUserData = async () => {
@@ -74,12 +96,16 @@ export default function AdminDashboard() {
       const res = await tagOrderService.getAdminOrders({
         status: orderStatusFilter,
         search: orderSearch,
+        dateFilter: orderDateFilter,
+        startDate: orderDateFilter === 'custom' ? orderStartDate : undefined,
+        endDate: orderDateFilter === 'custom' ? orderEndDate : undefined,
         page: orderPage,
-        limit: 15
+        limit: orderLimit
       });
       setOrders(res.orders || []);
       setOrderCounts(res.counts || { pendingCount: 0, processingCount: 0, printedCount: 0, deliveredCount: 0 });
       setOrderTotalPages(res.pagination.totalPages || 1);
+      setOrderTotalOrders(res.pagination.totalOrders || 0);
     } catch (err) {
       toast.error('Failed to load tag printing orders.');
     } finally {
@@ -93,7 +119,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadOrdersData();
-  }, [orderPage, orderStatusFilter]);
+  }, [orderPage, orderLimit, orderStatusFilter, orderDateFilter, orderStartDate, orderEndDate]);
 
   const handleUserSearchSubmit = (e) => {
     e.preventDefault();
@@ -318,6 +344,67 @@ export default function AdminDashboard() {
                 </select>
               </div>
 
+              {/* Date Filter Dropdown */}
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs">
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <select
+                  value={orderDateFilter}
+                  onChange={(e) => {
+                    setOrderDateFilter(e.target.value);
+                    setOrderPage(1);
+                  }}
+                  className="bg-transparent border-none text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                >
+                  <option value="all">All Dates</option>
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="last_7_days">Last 7 Days</option>
+                  <option value="last_30_days">Last 30 Days</option>
+                  <option value="this_month">This Month</option>
+                  <option value="custom">Custom Range...</option>
+                </select>
+              </div>
+
+              {/* Custom Date Range Inputs */}
+              {orderDateFilter === 'custom' && (
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs">
+                  <span className="text-[11px] font-semibold text-slate-400">From:</span>
+                  <input
+                    type="date"
+                    value={orderStartDate}
+                    onChange={(e) => {
+                      setOrderStartDate(e.target.value);
+                      setOrderPage(1);
+                    }}
+                    className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                  />
+                  <span className="text-[11px] font-semibold text-slate-400">To:</span>
+                  <input
+                    type="date"
+                    value={orderEndDate}
+                    onChange={(e) => {
+                      setOrderEndDate(e.target.value);
+                      setOrderPage(1);
+                    }}
+                    className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                  />
+                  {(orderStartDate || orderEndDate) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOrderStartDate('');
+                        setOrderEndDate('');
+                        setOrderPage(1);
+                      }}
+                      className="text-[11px] text-rose-600 hover:text-rose-700 font-bold ml-1"
+                      title="Clear custom dates"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Search Form */}
               <form onSubmit={handleOrderSearchSubmit} className="relative flex-1 sm:w-64">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -529,25 +616,80 @@ export default function AdminDashboard() {
           )}
 
           {/* Orders Pagination */}
-          {orderTotalPages > 1 && (
-            <div className="p-4 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
-              <span>Page {orderPage} of {orderTotalPages}</span>
-              <div className="flex gap-2">
-                <button
-                  disabled={orderPage <= 1}
-                  onClick={() => setOrderPage(p => p - 1)}
-                  className="px-3 py-1.5 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50 font-bold"
-                >
-                  Previous
-                </button>
-                <button
-                  disabled={orderPage >= orderTotalPages}
-                  onClick={() => setOrderPage(p => p + 1)}
-                  className="px-3 py-1.5 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50 font-bold"
-                >
-                  Next
-                </button>
+          {orderTotalPages > 0 && orders.length > 0 && (
+            <div className="p-4 px-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-slate-500">
+              <div className="flex flex-wrap items-center gap-3">
+                <span>
+                  Showing{' '}
+                  <strong className="text-slate-800 font-bold">
+                    {(orderPage - 1) * orderLimit + 1}
+                  </strong>{' '}
+                  to{' '}
+                  <strong className="text-slate-800 font-bold">
+                    {Math.min(orderPage * orderLimit, orderTotalOrders)}
+                  </strong>{' '}
+                  of <strong className="text-slate-800 font-bold">{orderTotalOrders}</strong> orders
+                </span>
+
+                <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+                  <span className="text-[11px] text-slate-400 font-medium">Per page:</span>
+                  <select
+                    value={orderLimit}
+                    onChange={(e) => {
+                      setOrderLimit(Number(e.target.value));
+                      setOrderPage(1);
+                    }}
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
               </div>
+
+              {/* Page Number Buttons */}
+              {orderTotalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    disabled={orderPage <= 1}
+                    onClick={() => setOrderPage((p) => Math.max(1, p - 1))}
+                    className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Previous Page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  {getPageNumbers(orderPage, orderTotalPages).map((pageNum, idx) =>
+                    pageNum === '...' ? (
+                      <span key={`dots-order-${idx}`} className="px-2 py-1 text-slate-400 font-bold">
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={`page-order-${pageNum}`}
+                        onClick={() => setOrderPage(pageNum)}
+                        className={`min-w-[32px] h-8 px-2 rounded-lg font-bold text-xs transition-all ${
+                          orderPage === pageNum
+                            ? 'bg-brand-600 text-white shadow-sm'
+                            : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    )
+                  )}
+
+                  <button
+                    disabled={orderPage >= orderTotalPages}
+                    onClick={() => setOrderPage((p) => Math.min(orderTotalPages, p + 1))}
+                    className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Next Page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -671,22 +813,45 @@ export default function AdminDashboard() {
 
           {/* User Pagination */}
           {userTotalPages > 1 && (
-            <div className="p-4 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
-              <span>Page {userPage} of {userTotalPages}</span>
-              <div className="flex gap-2">
+            <div className="p-4 px-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-slate-500">
+              <span>Page <strong className="text-slate-800 font-bold">{userPage}</strong> of <strong className="text-slate-800 font-bold">{userTotalPages}</strong></span>
+              <div className="flex items-center gap-1">
                 <button
                   disabled={userPage <= 1}
-                  onClick={() => setUserPage(p => p - 1)}
-                  className="px-3 py-1.5 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50 font-bold"
+                  onClick={() => setUserPage((p) => Math.max(1, p - 1))}
+                  className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title="Previous Page"
                 >
-                  Previous
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
+
+                {getPageNumbers(userPage, userTotalPages).map((pageNum, idx) =>
+                  pageNum === '...' ? (
+                    <span key={`dots-user-${idx}`} className="px-2 py-1 text-slate-400 font-bold">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={`page-user-${pageNum}`}
+                      onClick={() => setUserPage(pageNum)}
+                      className={`min-w-[32px] h-8 px-2 rounded-lg font-bold text-xs transition-all ${
+                        userPage === pageNum
+                          ? 'bg-brand-600 text-white shadow-sm'
+                          : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  )
+                )}
+
                 <button
                   disabled={userPage >= userTotalPages}
-                  onClick={() => setUserPage(p => p + 1)}
-                  className="px-3 py-1.5 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50 font-bold"
+                  onClick={() => setUserPage((p) => Math.min(userTotalPages, p + 1))}
+                  className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title="Next Page"
                 >
-                  Next
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
