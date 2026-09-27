@@ -49,11 +49,11 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
               >
                 {/* Brand */}
                 <div
-                  className="flex items-center gap-0.5 text-rose-700 font-black uppercase tracking-wider shrink-0"
+                  className="flex items-center gap-0.5 font-black uppercase tracking-wider shrink-0"
                   style={{ fontSize: '5.5pt' }}
                 >
-                  <ShieldAlert style={{ width: '6.5pt', height: '6.5pt' }} />
-                  <span>ResQTag</span>
+                  <ShieldAlert className="text-rose-700" style={{ width: '6.5pt', height: '6.5pt' }} />
+                  <span className="text-rose-700">ResQ</span><span className="text-black">Tag</span>
                 </div>
 
                 {/* QR Code */}
@@ -125,121 +125,111 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
 
             <div className="border-2 border-dashed border-slate-700 rounded-2xl p-4 bg-white flex flex-col sm:flex-row justify-center items-center gap-6">
               {/* Card Front */}
-              <div className="w-72 h-44 rounded-xl p-4 flex items-center justify-between bg-white relative overflow-hidden">
-                {/* Left Column: Brand & Details */}
-                <div className="flex-1 flex flex-col justify-between h-full pr-2">
-                  {/* Brand Header with Inline SVG Badge */}
-                  <div className="flex items-center gap-2">
-                    <svg
-                      width="38"
-                      height="38"
-                      viewBox="0 0 38 38"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="shrink-0"
-                    >
-                      <rect width="38" height="38" rx="10" fill="#e11d48" />
-                      <g transform="translate(7, 7)">
-                        <path
-                          d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
-                          stroke="#ffffff"
-                          strokeWidth="2.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          fill="none"
-                        />
-                        <path
-                          d="M12 8v4"
-                          stroke="#ffffff"
-                          strokeWidth="2.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M12 16h.01"
-                          stroke="#ffffff"
-                          strokeWidth="2.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </g>
-                    </svg>
-                    <div>
-                      <div className="text-lg font-black tracking-tight leading-none text-slate-900">
-                        <span className="text-rose-600">ResQ</span><span className="text-slate-900">Tag</span>
-                      </div>
-                      <span className="text-[7.5pt] font-extrabold text-slate-800 tracking-wider uppercase block mt-0.5">
-                        EMERGENCY QR
-                      </span>
-                    </div>
+              <div className="w-72 h-44 rounded-xl flex flex-col bg-white relative overflow-hidden border border-slate-100">
+                {/* Red Thick Top Bar */}
+                <div className="bg-rose-600 px-3 py-2 flex items-center gap-2 text-white shrink-0">
+                  <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center shrink-0 shadow-xs">
+                    <ShieldAlert className="w-4 h-4 text-rose-600 stroke-[2.5]" />
                   </div>
-
-                  {/* User Name & Instruction */}
-                  <div className="mt-auto">
-                    <div className="text-[12pt] font-extrabold text-slate-900 leading-tight truncate">
-                      {user?.firstName} {user?.lastName}
+                  <div>
+                    <div className="text-sm font-black tracking-tight leading-none">
+                      <span className="text-white">ResQ</span>
+                      <span className="text-slate-950">Tag</span>
                     </div>
-                    <div className="text-[7.5pt] font-bold text-slate-600 tracking-wider uppercase mt-1 leading-tight">
-                      <div>SCAN FOR</div>
-                      <div>EMERGENCY INFO</div>
-                    </div>
+                    <span className="text-[6.5pt] font-extrabold text-rose-100 tracking-wider uppercase block mt-0.5">
+                      EMERGENCY QR
+                    </span>
                   </div>
                 </div>
 
-                {/* Middle Vertical Divider (SVG gradient to guarantee print display) */}
-                <svg
-                  width="2"
-                  height="110"
-                  viewBox="0 0 2 110"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="shrink-0 mx-1"
-                >
-                  <defs>
-                    <linearGradient id="cardDividerGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.15" />
-                      <stop offset="50%" stopColor="#e11d48" stopOpacity="1" />
-                      <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.15" />
-                    </linearGradient>
-                  </defs>
-                  <line x1="1" y1="0" x2="1" y2="110" stroke="url(#cardDividerGrad)" strokeWidth="1.5" />
-                </svg>
+                {/* Fading Red Cross Decoration at Bottom-Left */}
+                <div className="absolute bottom-0 left-0 pointer-events-none" style={{ opacity: 0.14 }}>
+                  <svg width="74" height="74" viewBox="0 0 74 74" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="crossFadeFront" x1="0" y1="1" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#e11d48" stopOpacity="1" />
+                        <stop offset="100%" stopColor="#e11d48" stopOpacity="0.25" />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      d="M27 4h20v20h20v20H47v20H27V44H7V24h20V4z"
+                      fill="url(#crossFadeFront)"
+                    />
+                  </svg>
+                </div>
 
-                {/* Right Column: QR Code */}
-                <div className="shrink-0 flex items-center justify-center pl-1">
-                  <div className="p-1 rounded-lg bg-white">
-                    <QRCodeSVG value={emergencyUrl} size={96} level="H" />
+                {/* Card Body: Vertically Aligned Name + Scan Info & QR Code */}
+                <div className="flex-1 flex items-center justify-between px-3.5 py-1.5 relative z-10">
+                  {/* Left: Card Holder Name & Scan Instructions */}
+                  <div className="flex-1 flex flex-col justify-center pr-2">
+                    <div className="text-[12pt] font-black text-slate-900 leading-tight truncate">
+                      {user?.firstName} {user?.lastName}
+                    </div>
+                    <div className="text-[7.5pt] font-extrabold text-rose-700 tracking-wider uppercase mt-1 leading-tight">
+                      SCAN FOR
+                    </div>
+                    <div className="text-[7.5pt] font-extrabold text-slate-600 tracking-wider uppercase leading-tight">
+                      EMERGENCY INFO
+                    </div>
+                  </div>
+
+                  {/* Middle Vertical Divider */}
+                  <svg
+                    width="2"
+                    height="75"
+                    viewBox="0 0 2 75"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="shrink-0 mx-1.5"
+                  >
+                    <defs>
+                      <linearGradient id="cardDividerGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.15" />
+                        <stop offset="50%" stopColor="#e11d48" stopOpacity="0.9" />
+                        <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.15" />
+                      </linearGradient>
+                    </defs>
+                    <line x1="1" y1="0" x2="1" y2="75" stroke="url(#cardDividerGrad)" strokeWidth="1.5" />
+                  </svg>
+
+                  {/* Right: QR Code */}
+                  <div className="shrink-0 flex items-center justify-center p-1 bg-white rounded-lg border border-slate-100 shadow-xs">
+                    <QRCodeSVG value={emergencyUrl} size={82} level="H" />
                   </div>
                 </div>
               </div>
 
               {/* Card Back */}
-              <div className="w-72 h-44 rounded-xl p-4 flex flex-col justify-between bg-white text-slate-900 relative overflow-hidden border border-slate-100">
-                <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
-                  <ShieldAlert className="w-4 h-4 text-rose-600" />
-                  <span className="text-[8pt] font-black tracking-widest text-rose-700 uppercase">
+              <div className="w-72 h-44 rounded-xl flex flex-col justify-between bg-white text-slate-900 relative overflow-hidden border border-slate-100">
+                {/* Red Thick Top Bar (Matching Front) */}
+                <div className="bg-rose-600 px-3 py-2 flex items-center gap-2 text-white shrink-0">
+                  <ShieldAlert className="w-4 h-4 text-white shrink-0" />
+                  <span className="text-[7.5pt] font-black tracking-widest uppercase">
                     FIRST RESPONDER INSTRUCTIONS
                   </span>
                 </div>
 
-                <div className="space-y-2 text-[8pt] text-slate-700 leading-relaxed py-1">
-                  <div className="flex items-start gap-1.5">
-                    <span className="text-rose-600 font-bold">1.</span>
-                    <span>Scan the front QR code using any smartphone camera.</span>
+                {/* Back Body Instructions */}
+                <div className="flex-1 px-3.5 py-2 flex flex-col justify-between">
+                  <div className="space-y-1.5 text-[7.5pt] text-slate-700 leading-snug">
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-rose-600 font-bold">1.</span>
+                      <span>Scan the front QR code using any smartphone camera.</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-rose-600 font-bold">2.</span>
+                      <span>Access vital medical info, allergies & blood type instantly.</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-rose-600 font-bold">3.</span>
+                      <span>Tap the 1-touch dialer to immediately reach emergency contacts.</span>
+                    </div>
                   </div>
-                  <div className="flex items-start gap-1.5">
-                    <span className="text-rose-600 font-bold">2.</span>
-                    <span>Access vital medical info, allergies & blood type instantly.</span>
-                  </div>
-                  <div className="flex items-start gap-1.5">
-                    <span className="text-rose-600 font-bold">3.</span>
-                    <span>Tap the 1-touch dialer to immediately reach emergency contacts.</span>
-                  </div>
-                </div>
 
-                <div className="border-t border-slate-200 pt-2 text-[7.5pt] text-slate-500 flex justify-between items-center font-medium">
-                  <span>Official Emergency Medical ID</span>
-                  <span className="text-slate-700 font-semibold">Keep Visible in Wallet</span>
+                  <div className="border-t border-slate-200 pt-1.5 text-[7pt] text-slate-500 flex justify-between items-center font-medium">
+                    <span>Official Emergency Medical ID</span>
+                    <span className="text-slate-700 font-semibold">Keep Visible in Wallet</span>
+                  </div>
                 </div>
               </div>
             </div>
