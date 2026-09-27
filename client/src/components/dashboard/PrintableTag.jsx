@@ -41,15 +41,9 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
             >
               {/* ── Keychain FRONT ── 3.3 × 3.3 cm ── */}
               <div
-                className="border border-slate-300 rounded-lg bg-white shadow-sm flex flex-col items-center justify-between text-center overflow-hidden"
-                style={{ width: '3.3cm', height: '3.3cm', padding: '2.5mm', boxSizing: 'border-box' }}
+                className="border border-slate-300 rounded-lg bg-white shadow-sm flex flex-col items-center justify-center text-center overflow-hidden"
+                style={{ width: '3.3cm', height: '3.3cm', padding: '2.5mm', boxSizing: 'border-box', gap: '2mm' }}
               >
-                {/* Hole guide */}
-                <div
-                  className="rounded-full border border-slate-400 bg-slate-100 shrink-0"
-                  style={{ width: '4mm', height: '4mm' }}
-                />
-
                 {/* Brand */}
                 <div
                   className="flex items-center gap-0.5 text-rose-700 font-black uppercase tracking-wider shrink-0"
@@ -59,12 +53,12 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
                   <span>ResQTag</span>
                 </div>
 
-                {/* QR Code — 56px ≈ 1.5cm, fits comfortably */}
+                {/* QR Code — 62px, more room now hole guide is removed */}
                 <div className="border border-slate-200 rounded bg-white shrink-0" style={{ padding: '1px' }}>
-                  <QRCodeSVG value={emergencyUrl} size={56} level="H" />
+                  <QRCodeSVG value={emergencyUrl} size={62} level="H" />
                 </div>
 
-                {/* Footer — single line only to avoid overflow */}
+                {/* Footer */}
                 <span
                   className="font-black text-rose-700 tracking-wide uppercase shrink-0"
                   style={{ fontSize: '6pt' }}
@@ -78,15 +72,9 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
 
               {/* ── Keychain BACK ── 3.3 × 3.3 cm ── */}
               <div
-                className="border border-slate-300 rounded-lg bg-slate-900 text-white shadow-sm flex flex-col items-center justify-between text-center overflow-hidden"
-                style={{ width: '3.3cm', height: '3.3cm', padding: '2.5mm', boxSizing: 'border-box' }}
+                className="border border-slate-300 rounded-lg bg-slate-900 text-white shadow-sm flex flex-col items-center justify-center text-center overflow-hidden"
+                style={{ width: '3.3cm', height: '3.3cm', padding: '2.5mm', boxSizing: 'border-box', gap: '2mm' }}
               >
-                {/* Hole guide */}
-                <div
-                  className="rounded-full border border-slate-600 bg-slate-800 shrink-0"
-                  style={{ width: '4mm', height: '4mm' }}
-                />
-
                 {/* Name block */}
                 <div className="shrink-0">
                   <span
