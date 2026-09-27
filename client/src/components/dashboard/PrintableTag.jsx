@@ -72,20 +72,20 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
 
               {/* ── Keychain BACK ── 3.3 × 3.3 cm ── */}
               <div
-                className="border border-slate-300 rounded-lg bg-slate-900 text-white shadow-sm flex flex-col items-center justify-center text-center overflow-hidden"
+                className="border border-slate-300 rounded-lg bg-white text-black shadow-sm flex flex-col items-center justify-center text-center overflow-hidden"
                 style={{ width: '3.3cm', height: '3.3cm', padding: '2.5mm', boxSizing: 'border-box', gap: '2mm' }}
               >
                 {/* Name block */}
                 <div className="shrink-0">
                   <span
-                    className="uppercase tracking-widest text-rose-400 font-bold block"
+                    className="uppercase tracking-widest text-rose-700 font-black block"
                     style={{ fontSize: '6pt' }}
                   >
                     EMERGENCY ID
                   </span>
                   <span
-                    className="font-extrabold text-white leading-tight block"
-                    style={{ fontSize: '7pt' }}
+                    className="font-black text-black leading-tight block"
+                    style={{ fontSize: '7.5pt' }}
                   >
                     {user?.firstName} {user?.lastName}
                   </span>
@@ -93,17 +93,13 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
 
                 {/* Feature bullets */}
                 <div
-                  className="rounded bg-white/10 border border-white/10 text-slate-200 text-left w-full shrink-0"
+                  className="rounded bg-slate-50 border border-slate-200 text-black text-left w-full shrink-0 font-medium"
                   style={{ fontSize: '6pt', padding: '1.5mm', lineHeight: '1.5' }}
                 >
                   <p>• Scan QR for medical info</p>
                   <p>• 1-Touch emergency contacts</p>
                   <p>• Real-time cloud verified</p>
                 </div>
-
-                <span className="font-mono text-slate-400 shrink-0" style={{ fontSize: '6pt' }}>
-                  resqtag.com
-                </span>
               </div>
             </div>
 
