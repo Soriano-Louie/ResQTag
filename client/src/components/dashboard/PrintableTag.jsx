@@ -30,65 +30,108 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
         {showKeychain && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs font-bold text-slate-700 uppercase tracking-wider">
-              <span>🔑 Acrylic Keychain Tag (Fold & Insert Format)</span>
+              <span>🔑 Acrylic Keychain Tag — 3.3 × 3.3 cm (Fold &amp; Insert Format)</span>
               <span className="text-[10px] text-slate-400 font-normal">Cut along dashed line</span>
             </div>
 
-            <div className="border-2 border-dashed border-slate-700 rounded-2xl p-4 bg-white flex justify-around items-center max-w-lg mx-auto">
-              {/* Keychain Front */}
-              <div className="w-40 h-56 border border-slate-300 rounded-xl p-3 flex flex-col items-center justify-between text-center bg-white shadow-sm">
+            {/* Outer dashed cut border — total width = 2 panels × 3.3cm + divider gap */}
+            <div
+              className="border-2 border-dashed border-slate-700 rounded-2xl bg-white flex justify-around items-center mx-auto"
+              style={{ width: 'fit-content', padding: '8px', gap: '6px' }}
+            >
+              {/* ── Keychain FRONT ── 3.3 × 3.3 cm ── */}
+              <div
+                className="border border-slate-300 rounded-lg bg-white shadow-sm flex flex-col items-center justify-between text-center"
+                style={{ width: '3.3cm', height: '3.3cm', padding: '3mm' }}
+              >
                 {/* Hole guide */}
-                <div className="w-3.5 h-3.5 rounded-full border border-slate-400 bg-slate-100 flex items-center justify-center text-[7px] text-slate-400">
+                <div
+                  className="rounded-full border border-slate-400 bg-slate-100 flex items-center justify-center text-slate-400"
+                  style={{ width: '5mm', height: '5mm', fontSize: '5px' }}
+                >
                   ○
                 </div>
 
-                <div className="flex items-center gap-1 text-rose-700 font-black text-xs tracking-wider uppercase">
-                  <ShieldAlert className="w-3.5 h-3.5" />
+                {/* Brand */}
+                <div
+                  className="flex items-center gap-0.5 text-rose-700 font-black uppercase tracking-wider"
+                  style={{ fontSize: '7px' }}
+                >
+                  <ShieldAlert style={{ width: '8px', height: '8px' }} />
                   <span>ResQTag</span>
                 </div>
 
-                <div className="p-1.5 border border-slate-200 rounded-lg bg-white">
-                  <QRCodeSVG value={emergencyUrl} size={95} level="H" />
+                {/* QR Code — 1.8 cm = ~68px */}
+                <div className="border border-slate-200 rounded bg-white" style={{ padding: '2px' }}>
+                  <QRCodeSVG value={emergencyUrl} size={68} level="H" />
                 </div>
 
+                {/* Footer text */}
                 <div>
-                  <span className="text-[9px] font-black text-rose-700 tracking-wider uppercase block">
+                  <span
+                    className="font-black text-rose-700 tracking-wider uppercase block"
+                    style={{ fontSize: '6px' }}
+                  >
                     Scan in Emergency
                   </span>
-                  <span className="text-[8px] text-slate-400 font-medium">First Responders</span>
+                  <span className="text-slate-400" style={{ fontSize: '5.5px' }}>
+                    First Responders
+                  </span>
                 </div>
               </div>
 
               {/* Fold Divider */}
-              <div className="h-48 border-r-2 border-dotted border-slate-300 mx-2" />
+              <div style={{ height: '3.3cm', borderLeft: '2px dotted #cbd5e1', margin: '0 2px' }} />
 
-              {/* Keychain Back */}
-              <div className="w-40 h-56 border border-slate-300 rounded-xl p-3 flex flex-col items-center justify-between text-center bg-slate-900 text-white shadow-sm">
+              {/* ── Keychain BACK ── 3.3 × 3.3 cm ── */}
+              <div
+                className="border border-slate-300 rounded-lg bg-slate-900 text-white shadow-sm flex flex-col items-center justify-between text-center"
+                style={{ width: '3.3cm', height: '3.3cm', padding: '3mm' }}
+              >
                 {/* Hole guide */}
-                <div className="w-3.5 h-3.5 rounded-full border border-slate-600 bg-slate-800 flex items-center justify-center text-[7px] text-slate-400">
+                <div
+                  className="rounded-full border border-slate-600 bg-slate-800 flex items-center justify-center text-slate-400"
+                  style={{ width: '5mm', height: '5mm', fontSize: '5px' }}
+                >
                   ○
                 </div>
 
-                <div className="space-y-0.5">
-                  <span className="text-[8px] uppercase tracking-widest text-rose-400 font-bold block">
-                    EMERGENCY MEDICAL ID
+                {/* Name block */}
+                <div>
+                  <span
+                    className="uppercase tracking-widest text-rose-400 font-bold block"
+                    style={{ fontSize: '5.5px' }}
+                  >
+                    EMERGENCY ID
                   </span>
-                  <h4 className="font-extrabold text-xs text-white leading-tight">
+                  <span
+                    className="font-extrabold text-white leading-tight block"
+                    style={{ fontSize: '7.5px' }}
+                  >
                     {user?.firstName} {user?.lastName}
-                  </h4>
+                  </span>
                 </div>
 
-                <div className="p-2 rounded-lg bg-white/10 border border-white/10 text-[8px] space-y-1 text-slate-200 text-left w-full">
-                  <p>• Scan QR for vital medical info</p>
-                  <p>• 1-Touch dialing for family contacts</p>
-                  <p>• Real-time cloud verification</p>
+                {/* Feature bullets */}
+                <div
+                  className="rounded bg-white/10 border border-white/10 text-slate-200 text-left w-full"
+                  style={{ fontSize: '5px', padding: '2mm', lineHeight: '1.6' }}
+                >
+                  <p>• Scan QR for medical info</p>
+                  <p>• 1-Touch emergency contacts</p>
+                  <p>• Real-time cloud verified</p>
                 </div>
 
-                <span className="text-[8px] font-mono text-slate-400 tracking-wider">
+                <span className="font-mono text-slate-400" style={{ fontSize: '5px' }}>
                   resqtag.com
                 </span>
               </div>
             </div>
+
+            {/* Print size note */}
+            <p className="text-center text-[9px] text-slate-400 mt-1">
+              Each panel prints at exactly <strong>3.3 × 3.3 cm</strong> · Fold along center dotted line · Insert into acrylic fob
+            </p>
           </div>
         )}
 
