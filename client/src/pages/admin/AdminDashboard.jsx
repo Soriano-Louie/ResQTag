@@ -46,6 +46,8 @@ export default function AdminDashboard() {
   // Print Modal State & Batch Selection
   const [selectedPrintOrderIds, setSelectedPrintOrderIds] = useState(null);
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+  const [batchStatusValue, setBatchStatusValue] = useState('processing');
+  const [batchUpdating, setBatchUpdating] = useState(false);
 
   // Load User Data
   const loadUserData = async () => {
@@ -135,6 +137,21 @@ export default function AdminDashboard() {
       loadOrdersData();
     } catch (err) {
       toast.error(err.message);
+    }
+  };
+
+  const handleBatchStatusUpdate = async () => {
+    if (selectedOrderIds.length === 0) return;
+    setBatchUpdating(true);
+    try {
+      const res = await tagOrderService.batchUpdateOrderStatus(selectedOrderIds, batchStatusValue);
+      toast.success(res.message);
+      setSelectedOrderIds([]);
+      loadOrdersData();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Batch update failed.');
+    } finally {
+      setBatchUpdating(false);
     }
   };
 
@@ -315,31 +332,63 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Batch Print Actions Toolbar (When 1 or more orders are checked) */}
+          {/* Batch Actions Toolbar (When 1 or more orders are checked) */}
           {selectedOrderIds.length > 0 && (
-            <div className="mx-6 mb-2 p-3 px-4 bg-rose-50 border border-rose-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="mx-6 mb-2 p-3 px-4 bg-slate-900 border border-slate-700 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-md">
+              {/* Left: selection indicator */}
               <div className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-pulse" />
-                <span className="font-bold text-slate-900">
+                <span className="w-2.5 h-2.5 rounded-full bg-brand-500 animate-pulse" />
+                <span className="font-bold text-white">
                   {selectedOrderIds.length} {selectedOrderIds.length === 1 ? 'Order' : 'Orders'} Selected
                 </span>
-                <span className="text-slate-500 hidden sm:inline">
-                  • Ready for continuous paper-efficient batch printing
-                </span>
+                <button
+                  onClick={() => setSelectedOrderIds([])}
+                  className="text-slate-400 hover:text-white transition-colors text-[11px] underline underline-offset-2"
+                >
+                  Clear
+                </button>
               </div>
-              <div className="flex items-center gap-2">
+
+              {/* Right: action buttons */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Batch Status Update */}
+                <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-600 rounded-xl px-2 py-1">
+                  <span className="text-slate-400 font-semibold text-[11px] whitespace-nowrap">Set status →</span>
+                  <select
+                    value={batchStatusValue}
+                    onChange={(e) => setBatchStatusValue(e.target.value)}
+                    className="bg-transparent border-none text-[11px] font-bold text-white focus:outline-none cursor-pointer"
+                  >
+                    <option value="pending" className="text-slate-900">Pending</option>
+                    <option value="processing" className="text-slate-900">In Production</option>
+                    <option value="printed" className="text-slate-900">Printed</option>
+                    <option value="delivered" className="text-slate-900">Delivered</option>
+                    <option value="cancelled" className="text-slate-900">Cancelled</option>
+                  </select>
+                </div>
+                <button
+                  onClick={handleBatchStatusUpdate}
+                  disabled={batchUpdating}
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl text-xs shadow-sm transition-all disabled:opacity-60"
+                >
+                  {batchUpdating ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  )}
+                  Apply to All
+                </button>
+
+                {/* Divider */}
+                <span className="text-slate-600 hidden sm:inline">|</span>
+
+                {/* Batch Print */}
                 <button
                   onClick={() => setSelectedPrintOrderIds(selectedOrderIds)}
                   className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  Batch Print Selected ({selectedOrderIds.length})
-                </button>
-                <button
-                  onClick={() => setSelectedOrderIds([])}
-                  className="px-3 py-1.5 text-slate-600 hover:bg-rose-100/70 rounded-xl font-semibold transition-colors"
-                >
-                  Clear Selection
+                  Batch Print ({selectedOrderIds.length})
                 </button>
               </div>
             </div>

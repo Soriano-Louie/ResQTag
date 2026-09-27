@@ -5,6 +5,7 @@ import {
   cancelOrder,
   getAdminOrders,
   updateOrderStatus,
+  batchUpdateOrderStatus,
   getOrderPrintData
 } from '../controllers/tagOrderController.js';
 import { authenticate } from '../middleware/authMiddleware.js';
@@ -20,6 +21,7 @@ router.put('/:id/cancel', authenticate, cancelOrder);
 // Admin endpoints
 router.get('/admin', authenticate, requireAdmin, getAdminOrders);
 router.put('/admin/:id/status', authenticate, requireAdmin, updateOrderStatus);
+router.post('/admin/batch-status', authenticate, requireAdmin, batchUpdateOrderStatus);
 router.get('/admin/:id/print-data', authenticate, requireAdmin, getOrderPrintData);
 
 export default router;

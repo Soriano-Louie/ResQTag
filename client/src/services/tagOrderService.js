@@ -28,6 +28,12 @@ export const tagOrderService = {
     return res.data;
   },
 
+  async batchUpdateOrderStatus(orderIds, status) {
+    const res = await api.post('/tag-orders/admin/batch-status', { orderIds, status });
+    return res.data;
+  },
+
+
   async getOrderPrintData(orderId) {
     const res = await api.get(`/tag-orders/admin/${orderId}/print-data`);
     return res.data;

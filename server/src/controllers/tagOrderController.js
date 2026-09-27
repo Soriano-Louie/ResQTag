@@ -296,8 +296,38 @@ export async function getAdminOrders(req, res) {
 }
 
 /**
- * Admin updates order fulfillment status
+ * Admin bulk-updates status for multiple orders at once
  */
+export async function batchUpdateOrderStatus(req, res) {
+  try {
+    const { orderIds, status } = req.body;
+
+    if (!Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ message: 'orderIds must be a non-empty array.' });
+    }
+
+    const validStatuses = ['pending', 'processing', 'printed', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+    }
+
+    const placeholders = orderIds.map(() => '?').join(', ');
+    const [result] = await pool.query(
+      `UPDATE tag_orders SET order_status = ? WHERE order_id IN (${placeholders})`,
+      [status, ...orderIds]
+    );
+
+    return res.json({
+      message: `${result.affectedRows} order(s) updated to "${status}".`,
+      affectedRows: result.affectedRows,
+      orderStatus: status
+    });
+  } catch (error) {
+    console.error('batchUpdateOrderStatus error:', error);
+    return res.status(500).json({ message: 'Failed to batch update order statuses.', error: error.message });
+  }
+}
+
 export async function updateOrderStatus(req, res) {
   try {
     const { id } = req.params;
