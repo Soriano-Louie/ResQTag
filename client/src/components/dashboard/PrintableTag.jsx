@@ -34,79 +34,70 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
               <span className="text-[10px] text-slate-400 font-normal">Cut along dashed line</span>
             </div>
 
-            {/* Outer dashed cut border — total width = 2 panels × 3.3cm + divider gap */}
+            {/* Outer dashed cut border */}
             <div
               className="border-2 border-dashed border-slate-700 rounded-2xl bg-white flex justify-around items-center mx-auto"
-              style={{ width: 'fit-content', padding: '8px', gap: '6px' }}
+              style={{ width: 'fit-content', padding: '6px', gap: '4px' }}
             >
               {/* ── Keychain FRONT ── 3.3 × 3.3 cm ── */}
               <div
-                className="border border-slate-300 rounded-lg bg-white shadow-sm flex flex-col items-center justify-between text-center"
-                style={{ width: '3.3cm', height: '3.3cm', padding: '3mm' }}
+                className="border border-slate-300 rounded-lg bg-white shadow-sm flex flex-col items-center justify-between text-center overflow-hidden"
+                style={{ width: '3.3cm', height: '3.3cm', padding: '2.5mm', boxSizing: 'border-box' }}
               >
                 {/* Hole guide */}
                 <div
-                  className="rounded-full border border-slate-400 bg-slate-100 flex items-center justify-center text-slate-400"
-                  style={{ width: '5mm', height: '5mm', fontSize: '5px' }}
-                >
-                  ○
-                </div>
+                  className="rounded-full border border-slate-400 bg-slate-100 shrink-0"
+                  style={{ width: '4mm', height: '4mm' }}
+                />
 
                 {/* Brand */}
                 <div
-                  className="flex items-center gap-0.5 text-rose-700 font-black uppercase tracking-wider"
-                  style={{ fontSize: '7px' }}
+                  className="flex items-center gap-0.5 text-rose-700 font-black uppercase tracking-wider shrink-0"
+                  style={{ fontSize: '6pt' }}
                 >
-                  <ShieldAlert style={{ width: '8px', height: '8px' }} />
+                  <ShieldAlert style={{ width: '7pt', height: '7pt' }} />
                   <span>ResQTag</span>
                 </div>
 
-                {/* QR Code — 1.8 cm = ~68px */}
-                <div className="border border-slate-200 rounded bg-white" style={{ padding: '2px' }}>
-                  <QRCodeSVG value={emergencyUrl} size={68} level="H" />
+                {/* QR Code — 56px ≈ 1.5cm, fits comfortably */}
+                <div className="border border-slate-200 rounded bg-white shrink-0" style={{ padding: '1px' }}>
+                  <QRCodeSVG value={emergencyUrl} size={56} level="H" />
                 </div>
 
-                {/* Footer text */}
-                <div>
-                  <span
-                    className="font-black text-rose-700 tracking-wider uppercase block"
-                    style={{ fontSize: '6px' }}
-                  >
-                    Scan in Emergency
-                  </span>
-                  <span className="text-slate-400" style={{ fontSize: '5.5px' }}>
-                    First Responders
-                  </span>
-                </div>
+                {/* Footer — single line only to avoid overflow */}
+                <span
+                  className="font-black text-rose-700 tracking-wide uppercase shrink-0"
+                  style={{ fontSize: '6pt' }}
+                >
+                  Scan in Emergency
+                </span>
               </div>
 
               {/* Fold Divider */}
-              <div style={{ height: '3.3cm', borderLeft: '2px dotted #cbd5e1', margin: '0 2px' }} />
+              <div style={{ height: '3.3cm', borderLeft: '2px dotted #cbd5e1', margin: '0 1px', flexShrink: 0 }} />
 
               {/* ── Keychain BACK ── 3.3 × 3.3 cm ── */}
               <div
-                className="border border-slate-300 rounded-lg bg-slate-900 text-white shadow-sm flex flex-col items-center justify-between text-center"
-                style={{ width: '3.3cm', height: '3.3cm', padding: '3mm' }}
+                className="border border-slate-300 rounded-lg bg-slate-900 text-white shadow-sm flex flex-col items-center justify-between text-center overflow-hidden"
+                style={{ width: '3.3cm', height: '3.3cm', padding: '2.5mm', boxSizing: 'border-box' }}
               >
                 {/* Hole guide */}
                 <div
-                  className="rounded-full border border-slate-600 bg-slate-800 flex items-center justify-center text-slate-400"
-                  style={{ width: '5mm', height: '5mm', fontSize: '5px' }}
-                >
-                  ○
-                </div>
+                  className="rounded-full border border-slate-600 bg-slate-800 shrink-0"
+                  style={{ width: '4mm', height: '4mm' }}
+                />
 
                 {/* Name block */}
-                <div>
+                <div className="shrink-0">
                   <span
                     className="uppercase tracking-widest text-rose-400 font-bold block"
-                    style={{ fontSize: '5.5px' }}
+                    style={{ fontSize: '6pt' }}
                   >
                     EMERGENCY ID
                   </span>
                   <span
                     className="font-extrabold text-white leading-tight block"
-                    style={{ fontSize: '7.5px' }}
+                    style={{ fontSize: '7pt' }}
                   >
                     {user?.firstName} {user?.lastName}
                   </span>
@@ -114,15 +105,15 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
 
                 {/* Feature bullets */}
                 <div
-                  className="rounded bg-white/10 border border-white/10 text-slate-200 text-left w-full"
-                  style={{ fontSize: '5px', padding: '2mm', lineHeight: '1.6' }}
+                  className="rounded bg-white/10 border border-white/10 text-slate-200 text-left w-full shrink-0"
+                  style={{ fontSize: '6pt', padding: '1.5mm', lineHeight: '1.5' }}
                 >
                   <p>• Scan QR for medical info</p>
                   <p>• 1-Touch emergency contacts</p>
                   <p>• Real-time cloud verified</p>
                 </div>
 
-                <span className="font-mono text-slate-400" style={{ fontSize: '5px' }}>
+                <span className="font-mono text-slate-400 shrink-0" style={{ fontSize: '6pt' }}>
                   resqtag.com
                 </span>
               </div>
