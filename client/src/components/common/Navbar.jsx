@@ -44,8 +44,8 @@ export default function Navbar() {
               <ShieldAlert className="w-6 h-6 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="font-extrabold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-400">
-                ResQ<span className="text-brand-500">Tag</span>
+              <span className="font-extrabold text-xl tracking-tight">
+                <span className="text-rose-500">ResQ</span><span className="text-white">Tag</span>
               </span>
               <span className="text-[10px] text-slate-400 -mt-1 tracking-wider uppercase font-semibold">Emergency QR</span>
             </div>

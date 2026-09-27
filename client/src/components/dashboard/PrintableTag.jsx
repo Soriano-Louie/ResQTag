@@ -166,7 +166,7 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
                     </svg>
                     <div>
                       <div className="text-lg font-black tracking-tight leading-none text-slate-900">
-                        Res<span className="text-rose-600">QTag</span>
+                        <span className="text-rose-600">ResQ</span><span className="text-slate-900">Tag</span>
                       </div>
                       <span className="text-[7.5pt] font-extrabold text-slate-800 tracking-wider uppercase block mt-0.5">
                         EMERGENCY QR
