@@ -11,7 +11,10 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
   const showWalletCard = tagType === 'wallet_card' || tagType === 'bundle';
 
   return (
-    <div className="hidden print:block p-6 max-w-3xl mx-auto text-black font-sans bg-white">
+    <div
+      className="hidden print:block p-6 max-w-3xl mx-auto text-black font-sans bg-white"
+      style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+    >
       {/* Header Info for Manufacturer / Admin */}
       <div className="text-center mb-6 border-b-2 border-slate-300 pb-4">
         <div className="flex items-center justify-center gap-2 text-rose-700 font-black text-xl tracking-wider uppercase">
@@ -124,12 +127,43 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
               {/* Card Front */}
               <div className="w-72 h-44 rounded-xl p-4 flex items-center justify-between bg-white relative overflow-hidden">
                 {/* Left Column: Brand & Details */}
-                <div className="flex-1 flex flex-col justify-between h-full pr-3">
-                  {/* Brand Header */}
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white shrink-0 shadow-sm">
-                      <ShieldAlert className="w-6 h-6 stroke-[2.2]" />
-                    </div>
+                <div className="flex-1 flex flex-col justify-between h-full pr-2">
+                  {/* Brand Header with Inline SVG Badge */}
+                  <div className="flex items-center gap-2">
+                    <svg
+                      width="38"
+                      height="38"
+                      viewBox="0 0 38 38"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="shrink-0"
+                    >
+                      <rect width="38" height="38" rx="10" fill="#e11d48" />
+                      <g transform="translate(7, 7)">
+                        <path
+                          d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+                          stroke="#ffffff"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          fill="none"
+                        />
+                        <path
+                          d="M12 8v4"
+                          stroke="#ffffff"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M12 16h.01"
+                          stroke="#ffffff"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </g>
+                    </svg>
                     <div>
                       <div className="text-lg font-black tracking-tight leading-none text-slate-900">
                         Res<span className="text-rose-600">QTag</span>
@@ -152,11 +186,27 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
                   </div>
                 </div>
 
-                {/* Middle Vertical Divider */}
-                <div className="h-28 w-px bg-gradient-to-b from-rose-200 via-rose-500 to-rose-200 shrink-0 mx-1" />
+                {/* Middle Vertical Divider (SVG gradient to guarantee print display) */}
+                <svg
+                  width="2"
+                  height="110"
+                  viewBox="0 0 2 110"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="shrink-0 mx-1"
+                >
+                  <defs>
+                    <linearGradient id="cardDividerGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.15" />
+                      <stop offset="50%" stopColor="#e11d48" stopOpacity="1" />
+                      <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.15" />
+                    </linearGradient>
+                  </defs>
+                  <line x1="1" y1="0" x2="1" y2="110" stroke="url(#cardDividerGrad)" strokeWidth="1.5" />
+                </svg>
 
                 {/* Right Column: QR Code */}
-                <div className="shrink-0 flex items-center justify-center pl-2">
+                <div className="shrink-0 flex items-center justify-center pl-1">
                   <div className="p-1 rounded-lg bg-white">
                     <QRCodeSVG value={emergencyUrl} size={96} level="H" />
                   </div>
@@ -164,34 +214,32 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
               </div>
 
               {/* Card Back */}
-              <div className="w-72 h-44 rounded-xl p-4 flex flex-col justify-between bg-slate-900 text-white relative overflow-hidden">
-                <div className="flex items-center justify-between border-b border-slate-700 pb-2">
-                  <div className="flex items-center gap-2">
-                    <ShieldAlert className="w-4 h-4 text-rose-500" />
-                    <span className="text-[8pt] font-mono tracking-widest text-rose-400 font-bold uppercase">
-                      FIRST RESPONDER INSTRUCTIONS
-                    </span>
-                  </div>
+              <div className="w-72 h-44 rounded-xl p-4 flex flex-col justify-between bg-white text-slate-900 relative overflow-hidden border border-slate-100">
+                <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+                  <ShieldAlert className="w-4 h-4 text-rose-600" />
+                  <span className="text-[8pt] font-black tracking-widest text-rose-700 uppercase">
+                    FIRST RESPONDER INSTRUCTIONS
+                  </span>
                 </div>
 
-                <div className="space-y-2 text-[8pt] text-slate-300 leading-relaxed py-1">
+                <div className="space-y-2 text-[8pt] text-slate-700 leading-relaxed py-1">
                   <div className="flex items-start gap-1.5">
-                    <span className="text-rose-400 font-bold">1.</span>
+                    <span className="text-rose-600 font-bold">1.</span>
                     <span>Scan the front QR code using any smartphone camera.</span>
                   </div>
                   <div className="flex items-start gap-1.5">
-                    <span className="text-rose-400 font-bold">2.</span>
+                    <span className="text-rose-600 font-bold">2.</span>
                     <span>Access vital medical info, allergies & blood type instantly.</span>
                   </div>
                   <div className="flex items-start gap-1.5">
-                    <span className="text-rose-400 font-bold">3.</span>
+                    <span className="text-rose-600 font-bold">3.</span>
                     <span>Tap the 1-touch dialer to immediately reach emergency contacts.</span>
                   </div>
                 </div>
 
-                <div className="border-t border-slate-700 pt-2 text-[7.5pt] text-slate-400 flex justify-between items-center font-medium">
+                <div className="border-t border-slate-200 pt-2 text-[7.5pt] text-slate-500 flex justify-between items-center font-medium">
                   <span>Official Emergency Medical ID</span>
-                  <span className="text-slate-300 font-semibold">Keep Visible in Wallet</span>
+                  <span className="text-slate-700 font-semibold">Keep Visible in Wallet</span>
                 </div>
               </div>
             </div>
