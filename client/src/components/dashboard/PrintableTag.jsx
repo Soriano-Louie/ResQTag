@@ -122,54 +122,76 @@ export default function PrintableTag({ qr, user, tagType = 'bundle' }) {
 
             <div className="border-2 border-dashed border-slate-700 rounded-2xl p-4 bg-white flex flex-col sm:flex-row justify-center items-center gap-6">
               {/* Card Front */}
-              <div className="w-72 h-44 rounded-xl p-3.5 flex flex-col justify-between bg-white">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                  <div className="flex items-center gap-1 text-rose-700 font-black text-xs uppercase tracking-wider">
-                    <HeartPulse className="w-4 h-4" />
-                    <span>Emergency Medical Card</span>
+              <div className="w-72 h-44 rounded-xl p-4 flex items-center justify-between bg-white relative overflow-hidden">
+                {/* Left Column: Brand & Details */}
+                <div className="flex-1 flex flex-col justify-between h-full pr-3">
+                  {/* Brand Header */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white shrink-0 shadow-sm">
+                      <ShieldAlert className="w-6 h-6 stroke-[2.2]" />
+                    </div>
+                    <div>
+                      <div className="text-lg font-black tracking-tight leading-none text-slate-900">
+                        Res<span className="text-rose-600">QTag</span>
+                      </div>
+                      <span className="text-[7.5pt] font-extrabold text-slate-800 tracking-wider uppercase block mt-0.5">
+                        EMERGENCY QR
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-[9px] font-mono text-slate-400">ResQTag</span>
-                </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="p-1 border border-slate-200 rounded-lg bg-white shrink-0">
-                    <QRCodeSVG value={emergencyUrl} size={70} level="H" />
-                  </div>
-                  <div className="text-[10px] space-y-0.5 text-slate-700 flex-1 min-w-0">
-                    <span className="text-[8px] uppercase font-bold text-slate-400 block">CARDHOLDER</span>
-                    <span className="font-extrabold text-xs text-slate-900 block truncate">
+                  {/* User Name & Instruction */}
+                  <div className="mt-auto">
+                    <div className="text-[12pt] font-extrabold text-slate-900 leading-tight truncate">
                       {user?.firstName} {user?.lastName}
-                    </span>
-                    <p className="text-[9px] text-slate-600 leading-tight pt-0.5">
-                      First responders scan QR for allergies, medical notes & instant emergency contacts.
-                    </p>
+                    </div>
+                    <div className="text-[7.5pt] font-bold text-slate-600 tracking-wider uppercase mt-1 leading-tight">
+                      <div>SCAN FOR</div>
+                      <div>EMERGENCY INFO</div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="border-t border-slate-200 pt-1 text-[8px] text-slate-500 flex justify-between items-center">
-                  <span>Keep in wallet or behind phone case</span>
-                  <span className="font-mono">resqtag.com</span>
+                {/* Middle Vertical Divider */}
+                <div className="h-28 w-px bg-gradient-to-b from-rose-200 via-rose-500 to-rose-200 shrink-0 mx-1" />
+
+                {/* Right Column: QR Code */}
+                <div className="shrink-0 flex items-center justify-center pl-2">
+                  <div className="p-1 rounded-lg bg-white">
+                    <QRCodeSVG value={emergencyUrl} size={96} level="H" />
+                  </div>
                 </div>
               </div>
 
               {/* Card Back */}
-              <div className="w-72 h-44 rounded-xl p-3.5 flex flex-col justify-between bg-slate-900 text-white">
-                <div className="flex items-center justify-between border-b border-slate-700 pb-1.5">
-                  <span className="text-[9px] font-mono tracking-widest text-rose-400 font-bold uppercase">
-                    FIRST RESPONDER INSTRUCTIONS
-                  </span>
-                  <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+              <div className="w-72 h-44 rounded-xl p-4 flex flex-col justify-between bg-slate-900 text-white relative overflow-hidden">
+                <div className="flex items-center justify-between border-b border-slate-700 pb-2">
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 text-rose-500" />
+                    <span className="text-[8pt] font-mono tracking-widest text-rose-400 font-bold uppercase">
+                      FIRST RESPONDER INSTRUCTIONS
+                    </span>
+                  </div>
                 </div>
 
-                <div className="space-y-1 text-[9px] text-slate-300">
-                  <p><strong>1.</strong> Open smartphone camera and scan the front QR code.</p>
-                  <p><strong>2.</strong> Access blood type, medications & severe allergies.</p>
-                  <p><strong>3.</strong> Tap 1-touch dialer to immediately call designated emergency contacts.</p>
+                <div className="space-y-2 text-[8pt] text-slate-300 leading-relaxed py-1">
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-rose-400 font-bold">1.</span>
+                    <span>Scan the front QR code using any smartphone camera.</span>
+                  </div>
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-rose-400 font-bold">2.</span>
+                    <span>Access vital medical info, allergies & blood type instantly.</span>
+                  </div>
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-rose-400 font-bold">3.</span>
+                    <span>Tap the 1-touch dialer to immediately reach emergency contacts.</span>
+                  </div>
                 </div>
 
-                <div className="border-t border-slate-700 pt-1 text-[8px] text-slate-400 flex justify-between items-center">
-                  <span>Official Encrypted Emergency ID</span>
-                  <span className="font-mono text-slate-200">RQ-{qr.qr_token.slice(0, 8).toUpperCase()}</span>
+                <div className="border-t border-slate-700 pt-2 text-[7.5pt] text-slate-400 flex justify-between items-center font-medium">
+                  <span>Official Emergency Medical ID</span>
+                  <span className="text-slate-300 font-semibold">Keep Visible in Wallet</span>
                 </div>
               </div>
             </div>
