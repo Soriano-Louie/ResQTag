@@ -228,11 +228,11 @@ export default function QRCard({ qr, user, onQRUpdated }) {
                   level="H"
                   includeMargin={true}
                   imageSettings={{
-                    src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e11d48'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>",
+                    src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='sg' x1='0' y1='0' x2='0' y2='1'><stop offset='0%25' stop-color='%23f43f5e'/><stop offset='100%25' stop-color='%23be123c'/></linearGradient></defs><rect width='100' height='100' rx='22' ry='22' fill='url(%23sg)'/><path d='M50 10 C50 10 20 22 20 40 L20 58 C20 74 50 90 50 90 C50 90 80 74 80 58 L80 40 C80 22 50 10 50 10Z' fill='white' fill-opacity='0.18'/><text x='50' y='72' font-family='Arial Black,sans-serif' font-weight='900' font-size='52' text-anchor='middle' fill='white'>!</text></svg>",
                     x: undefined,
                     y: undefined,
-                    height: 32,
-                    width: 32,
+                    height: 36,
+                    width: 36,
                     excavate: true,
                   }}
                 />
