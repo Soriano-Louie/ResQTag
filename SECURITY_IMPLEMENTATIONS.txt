@@ -1,0 +1,121 @@
+gene================================================================================
+                    RESQTAG - SECURITY IMPLEMENTATION GUIDE
+                  (Simple, Easy-to-Understand Explanations)
+================================================================================
+
+This document explains all the security measures and protections built into the 
+ResQTag website to keep user accounts and sensitive medical information safe.
+
+--------------------------------------------------------------------------------
+1. PROTECTION AGAINST SQL INJECTION (Safe Database Queries)
+--------------------------------------------------------------------------------
+* What is the threat?
+  Hackers often try typing database commands into input fields (like names or 
+  search bars) to steal all user records or delete data.
+
+* How ResQTag protects you:
+  - Prepared Statements (Parameterized Queries): Every single search and data 
+    request uses strict database parameters ("? placeholders"). User input is 
+    treated strictly as plain text, never as executable code.
+  - Whitelisting: Only approved privacy fields, order statuses, and data keys 
+    are accepted. If someone tries sending a fake or dangerous database field, 
+    the system automatically ignores it.
+  - Number & Token Verification: IDs and QR tokens are checked with strict rules 
+    (e.g., verifying they are genuine numbers or legitimate alphanumeric codes) 
+    before the database is ever touched.
+
+--------------------------------------------------------------------------------
+2. RATE LIMITING (Stopping Password Guessing & Server Flooding)
+--------------------------------------------------------------------------------
+* What is the threat?
+  Bots or attackers can run automated scripts to guess passwords thousands of 
+  times per minute, flood order queues, or overload the website (DDoS attacks).
+
+* How ResQTag protects you:
+  - Login & Registration Limiter: Allows a maximum of 10 attempts every 15 minutes. 
+    This completely stops automated password guessing (brute-force attacks).
+  - Public QR Code Scanner Limiter: Protects the public emergency scan link with 
+    a limit of 60 scans per minute per device. This stops data scrapers while 
+    making sure real first responders can view emergency profiles instantly.
+  - Order Request Limiter: Limits tag orders and order modifications to 30 requests 
+    every 15 minutes to prevent spamming.
+  - Overall Website Limiter: Caps all generic website traffic to 300 requests every 
+    15 minutes per device to prevent website crashes and server overload.
+
+--------------------------------------------------------------------------------
+3. MALICIOUS SCRIPT CLEANING (XSS & Input Sanitization)
+--------------------------------------------------------------------------------
+* What is the threat?
+  Attackers can try putting hidden JavaScript code or fake links inside notes, 
+  allergies, or addresses. When another person views the page, the script could 
+  steal their session.
+
+* How ResQTag protects you:
+  - Automatic Input Cleaning: Any text submitted by a user (names, medical notes, 
+    allergies, medications, addresses) is cleaned before it is stored.
+  - Script Stripping: HTML tags like <script>, dangerous click triggers (onclick, 
+    onerror), and fake web links (javascript:...) are completely removed.
+
+--------------------------------------------------------------------------------
+4. MEDICAL PRIVACY ENGINE (Zero-Leak Emergency Profiles)
+--------------------------------------------------------------------------------
+* What is the threat?
+  When a QR code is scanned in an emergency, responders only need vital info. 
+  Private details (like full home addresses or unshared contacts) must not leak.
+
+* How ResQTag protects you:
+  - Server-Side Privacy Filtering: The server filters the profile BEFORE sending 
+    data to the browser.
+  - Locked By Default: Private fields are completely omitted from the network 
+    response, meaning no one can inspect browser code to uncover hidden info.
+  - Contact Privacy: Only emergency contacts specifically marked as "Public" 
+    are visible on the emergency screen.
+
+--------------------------------------------------------------------------------
+5. SECURITY HEADERS & BROWSER SHIELDS
+--------------------------------------------------------------------------------
+* What is the threat?
+  Malicious websites can try embedding ResQTag inside a hidden frame (Clickjacking) 
+  to trick users into clicking buttons, or intercept data on unencrypted connections.
+
+* How ResQTag protects you:
+  - Clickjacking Defense (X-Frame-Options: DENY): Prevents other websites from 
+    framing or displaying ResQTag inside invisible windows.
+  - HTTPS Enforcement (HSTS): Tells browsers to always use encrypted HTTPS 
+    connections.
+  - Content Security Policy (CSP): Specifies exactly where scripts, fonts, and 
+    styles can load from, preventing unauthorized external scripts.
+  - MIME-Type Sniffing Protection (X-Content-Type-Options: nosniff): Stops 
+    browsers from executing disguised files.
+
+--------------------------------------------------------------------------------
+6. SECURE LOGIN & PASSWORD ENCRYPTION
+--------------------------------------------------------------------------------
+* What is the threat?
+  If a database is ever stolen, plain-text passwords could be exposed.
+
+* How ResQTag protects you:
+  - Salted Bcrypt Hashing: Passwords are never saved in plain text. They are 
+    scrambled using 12 rounds of bcrypt encryption with unique random salts. 
+    Even system administrators cannot see user passwords.
+  - Secure HTTP-Only Cookies: Login session tokens are stored in secure cookies 
+    that JavaScript in the browser cannot read, protecting against session theft.
+
+--------------------------------------------------------------------------------
+7. HIDING TECHNICAL ERRORS
+--------------------------------------------------------------------------------
+* What is the threat?
+  Detailed database error messages can show database table names, column names, 
+  or server software versions to attackers.
+
+* How ResQTag protects you:
+  - Friendly Error Masks: In production, internal database error messages and 
+    stack traces are hidden from users. Instead, a clean, safe message is shown, 
+    while the technical details are logged privately on the server.
+
+================================================================================
+SUMMARY:
+With parameterized SQL queries, brute-force rate limiters, automatic input 
+cleaning, server-enforced medical privacy rules, bank-grade password encryption, 
+and browser security shields, ResQTag keeps all user and emergency data safe.
+================================================================================

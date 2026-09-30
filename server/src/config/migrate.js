@@ -98,45 +98,65 @@ export async function runMigrations() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // 6. Tag orders table (Physical tag print requests)
+    // 6. Tag orders table (Physical tag print & digital delivery requests)
     await connection.query(`
       CREATE TABLE IF NOT EXISTS tag_orders (
         order_id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
+        delivery_type ENUM('digital_email', 'physical_shipping') DEFAULT 'digital_email',
+        target_email VARCHAR(150) NULL,
         recipient_name VARCHAR(100) NOT NULL,
         contact_number VARCHAR(30) NOT NULL,
         shipping_address TEXT NOT NULL,
         tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain',
+        selected_size VARCHAR(100) DEFAULT 'standard',
+        custom_dimensions VARCHAR(255) NULL,
         quantity INT DEFAULT 1,
         order_status ENUM('pending', 'processing', 'printed', 'delivered', 'cancelled') DEFAULT 'pending',
+        payment_status ENUM('unpaid', 'submitted', 'verified', 'rejected') DEFAULT 'submitted',
+        gcash_receipt_url VARCHAR(255) NULL,
+        gcash_ref_number VARCHAR(100) NULL,
+        admin_rejection_reason TEXT NULL,
         notes TEXT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
         INDEX idx_order_user (user_id),
-        INDEX idx_order_status (order_status)
+        INDEX idx_order_status (order_status),
+        INDEX idx_payment_status (payment_status)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // 6. Ensure tag_type column exists on tag_orders
-    try {
-      const [colCheck] = await connection.query(`
-        SELECT COLUMN_NAME 
-        FROM information_schema.COLUMNS 
-        WHERE TABLE_SCHEMA = DATABASE() 
-          AND TABLE_NAME = 'tag_orders' 
-          AND COLUMN_NAME = 'tag_type';
-      `);
+    // Ensure all dynamic columns exist on existing tag_orders installations
+    const newColumns = [
+      { name: 'delivery_type', sql: "ALTER TABLE tag_orders ADD COLUMN delivery_type ENUM('digital_email', 'physical_shipping') DEFAULT 'digital_email' AFTER user_id;" },
+      { name: 'target_email', sql: "ALTER TABLE tag_orders ADD COLUMN target_email VARCHAR(150) NULL AFTER delivery_type;" },
+      { name: 'tag_type', sql: "ALTER TABLE tag_orders ADD COLUMN tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain' AFTER shipping_address;" },
+      { name: 'selected_size', sql: "ALTER TABLE tag_orders ADD COLUMN selected_size VARCHAR(100) DEFAULT 'standard' AFTER tag_type;" },
+      { name: 'custom_dimensions', sql: "ALTER TABLE tag_orders ADD COLUMN custom_dimensions VARCHAR(255) NULL AFTER selected_size;" },
+      { name: 'payment_status', sql: "ALTER TABLE tag_orders ADD COLUMN payment_status ENUM('unpaid', 'submitted', 'verified', 'rejected') DEFAULT 'submitted' AFTER order_status;" },
+      { name: 'gcash_receipt_url', sql: "ALTER TABLE tag_orders ADD COLUMN gcash_receipt_url VARCHAR(255) NULL AFTER notes;" },
+      { name: 'gcash_ref_number', sql: "ALTER TABLE tag_orders ADD COLUMN gcash_ref_number VARCHAR(100) NULL AFTER gcash_receipt_url;" },
+      { name: 'admin_rejection_reason', sql: "ALTER TABLE tag_orders ADD COLUMN admin_rejection_reason TEXT NULL AFTER gcash_ref_number;" }
+    ];
 
-      if (colCheck.length === 0) {
-        await connection.query(`
-          ALTER TABLE tag_orders 
-          ADD COLUMN tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain' AFTER shipping_address;
-        `);
-        console.log('✅ Added missing tag_type column to tag_orders table.');
+    for (const col of newColumns) {
+      try {
+        const [colCheck] = await connection.query(`
+          SELECT COLUMN_NAME 
+          FROM information_schema.COLUMNS 
+          WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'tag_orders' 
+            AND COLUMN_NAME = ?;
+        `, [col.name]);
+
+        if (colCheck.length === 0) {
+          await connection.query(col.sql);
+          console.log(`✅ Added missing ${col.name} column to tag_orders table.`);
+        }
+      } catch (colErr) {
+        console.warn(`Column check note for ${col.name}:`, colErr.message);
       }
-    } catch (err) {
-      console.error('Column migration note:', err.message);
     }
 
     // Seed default admin if none exists

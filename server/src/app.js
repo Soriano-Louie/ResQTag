@@ -2,13 +2,19 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { config } from './config/env.js';
 import routes from './routes/index.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 import { generalLimiter } from './middleware/rateLimiter.js';
 import { sanitizeInputs } from './middleware/sanitize.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
+
 
 // Trust proxy for Render / Cloud reverse proxies (critical for secure cookies & rate limiters)
 app.set('trust proxy', 1);
@@ -77,8 +83,12 @@ app.use(cookieParser());
 // Input Sanitization (protects against script injections and HTML payloads in data inputs)
 app.use(sanitizeInputs);
 
+// Static directory for uploaded receipt files
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+
 // General Rate Limiter (applies to all endpoints)
 app.use(generalLimiter);
+
 
 // Base Route
 app.get('/', (req, res) => {

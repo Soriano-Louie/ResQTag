@@ -1,21 +1,56 @@
 import pool from '../config/db.js';
+import { sendDigitalTagEmail } from '../utils/brevoEmailService.js';
 
 // ==========================================
 // USER CONTROLLERS
 // ==========================================
 
 /**
- * User submits a new physical tag print order / request
+ * User submits a new physical tag print or digital email QR request
  */
 export async function createOrder(req, res) {
   try {
     const userId = req.user.user_id;
-    const { recipientName, contactNumber, shippingAddress, tagType, quantity, notes } = req.body;
+    const {
+      recipientName,
+      contactNumber,
+      shippingAddress,
+      deliveryType = 'digital_email',
+      targetEmail,
+      tagType = 'keychain',
+      selectedSize = 'standard',
+      customDimensions,
+      quantity = 1,
+      gcashRefNumber,
+      notes
+    } = req.body;
 
     // Validation
-    if (!recipientName || !contactNumber || !shippingAddress) {
-      return res.status(400).json({ 
-        message: 'Recipient name, contact number, and shipping address are required.' 
+    if (!recipientName || !contactNumber) {
+      return res.status(400).json({
+        message: 'Recipient name and contact number are required.'
+      });
+    }
+
+    const chosenDeliveryType = deliveryType === 'physical_shipping' ? 'physical_shipping' : 'digital_email';
+    const emailToUse = (targetEmail || req.user.email || '').trim();
+
+    if (chosenDeliveryType === 'digital_email' && !emailToUse) {
+      return res.status(400).json({
+        message: 'A valid email address is required for digital delivery.'
+      });
+    }
+
+    // Shipping address fallback for digital orders
+    const addressToUse = (shippingAddress && shippingAddress.trim())
+      ? shippingAddress.trim()
+      : chosenDeliveryType === 'digital_email'
+        ? `Digital Delivery Inbox: ${emailToUse}`
+        : '';
+
+    if (chosenDeliveryType === 'physical_shipping' && !addressToUse) {
+      return res.status(400).json({
+        message: 'Complete shipping address is required for physical delivery.'
       });
     }
 
@@ -27,6 +62,15 @@ export async function createOrder(req, res) {
       return res.status(400).json({ message: 'Quantity must be between 1 and 20.' });
     }
 
+    // Handle receipt upload from multer / Cloudinary
+    let receiptUrl = null;
+    if (req.file) {
+      receiptUrl = req.file.path || req.file.secure_url || `/uploads/receipts/${req.file.filename}`;
+    } else if (req.body.gcashReceiptUrl) {
+      receiptUrl = req.body.gcashReceiptUrl.trim();
+    }
+
+
     // Verify user has an active QR tag
     const [qrRows] = await pool.query(
       'SELECT qr_id, qr_token, status FROM qr_tags WHERE user_id = ?',
@@ -34,42 +78,49 @@ export async function createOrder(req, res) {
     );
 
     if (qrRows.length === 0) {
-      return res.status(400).json({ 
-        message: 'No QR Tag registered for this account. Please refresh your dashboard.' 
+      return res.status(400).json({
+        message: 'No QR Tag registered for this account. Please refresh your dashboard.'
       });
     }
 
-    let result;
-    try {
-      const [insertRes] = await pool.query(
-        `INSERT INTO tag_orders (user_id, recipient_name, contact_number, shipping_address, tag_type, quantity, order_status, notes)
-         VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
-        [userId, recipientName.trim(), contactNumber.trim(), shippingAddress.trim(), chosenType, qty, notes ? notes.trim() : null]
-      );
-      result = insertRes;
-    } catch (dbErr) {
-      // Self-healing: if tag_type column is missing on older table, add column and retry
-      if (dbErr.code === 'ER_BAD_FIELD_ERROR' || dbErr.message?.includes('tag_type')) {
-        await pool.query(`
-          ALTER TABLE tag_orders 
-          ADD COLUMN tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain' AFTER shipping_address;
-        `);
-        const [retryRes] = await pool.query(
-          `INSERT INTO tag_orders (user_id, recipient_name, contact_number, shipping_address, tag_type, quantity, order_status, notes)
-           VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
-          [userId, recipientName.trim(), contactNumber.trim(), shippingAddress.trim(), chosenType, qty, notes ? notes.trim() : null]
-        );
-        result = retryRes;
-      } else {
-        throw dbErr;
-      }
-    }
+    const cleanRef = gcashRefNumber ? gcashRefNumber.trim() : null;
+    const cleanNotes = notes ? notes.trim() : null;
+    const cleanCustomDims = customDimensions ? customDimensions.trim() : null;
+
+    const [insertRes] = await pool.query(
+      `INSERT INTO tag_orders (
+        user_id, delivery_type, target_email, recipient_name, contact_number, 
+        shipping_address, tag_type, selected_size, custom_dimensions, quantity, 
+        order_status, payment_status, gcash_receipt_url, gcash_ref_number, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'submitted', ?, ?, ?)`,
+      [
+        userId,
+        chosenDeliveryType,
+        emailToUse,
+        recipientName.trim(),
+        contactNumber.trim(),
+        addressToUse,
+        chosenType,
+        selectedSize || 'standard',
+        cleanCustomDims,
+        qty,
+        receiptUrl,
+        cleanRef,
+        cleanNotes
+      ]
+    );
 
     return res.status(201).json({
-      message: 'Physical ResQTag order request submitted successfully!',
-      orderId: result.insertId,
+      message: chosenDeliveryType === 'digital_email'
+        ? 'Digital ResQTag delivery request submitted! Our team will verify your GCash receipt and dispatch your QR templates via email.'
+        : 'Physical ResQTag order request submitted successfully!',
+      orderId: insertRes.insertId,
+      deliveryType: chosenDeliveryType,
+      targetEmail: emailToUse,
+      tagType: chosenType,
+      selectedSize: selectedSize || 'standard',
       status: 'pending',
-      tagType: chosenType
+      paymentStatus: 'submitted'
     });
   } catch (error) {
     console.error('createOrder error:', error);
@@ -84,39 +135,80 @@ export async function getMyOrders(req, res) {
   try {
     const userId = req.user.user_id;
 
-    let orders;
-    try {
-      const [rows] = await pool.query(
-        `SELECT order_id, recipient_name, contact_number, shipping_address, tag_type, quantity, order_status, notes, created_at, updated_at
-         FROM tag_orders
-         WHERE user_id = ?
-         ORDER BY created_at DESC`,
-        [userId]
-      );
-      orders = rows;
-    } catch (dbErr) {
-      if (dbErr.code === 'ER_BAD_FIELD_ERROR' || dbErr.message?.includes('tag_type')) {
-        await pool.query(`
-          ALTER TABLE tag_orders 
-          ADD COLUMN tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain' AFTER shipping_address;
-        `);
-        const [rows] = await pool.query(
-          `SELECT order_id, recipient_name, contact_number, shipping_address, tag_type, quantity, order_status, notes, created_at, updated_at
-           FROM tag_orders
-           WHERE user_id = ?
-           ORDER BY created_at DESC`,
-          [userId]
-        );
-        orders = rows;
-      } else {
-        throw dbErr;
-      }
-    }
+    const [orders] = await pool.query(
+      `SELECT 
+         order_id, delivery_type, target_email, recipient_name, contact_number, 
+         shipping_address, tag_type, selected_size, custom_dimensions, quantity, 
+         order_status, payment_status, gcash_receipt_url, gcash_ref_number, 
+         admin_rejection_reason, notes, created_at, updated_at
+       FROM tag_orders
+       WHERE user_id = ?
+       ORDER BY created_at DESC`,
+      [userId]
+    );
 
     return res.json({ orders: orders || [] });
   } catch (error) {
     console.error('getMyOrders error:', error);
     return res.status(500).json({ message: 'Failed to fetch your tag orders.', error: error.message });
+  }
+}
+
+/**
+ * User resubmits payment receipt for a rejected order
+ */
+export async function resubmitPayment(req, res) {
+  try {
+    const userId = req.user.user_id;
+    const { id } = req.params;
+    const { gcashRefNumber } = req.body;
+
+    const [rows] = await pool.query(
+      'SELECT order_id, payment_status FROM tag_orders WHERE order_id = ? AND user_id = ?',
+      [id, userId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Order not found.' });
+    }
+
+    let receiptUrl = null;
+    if (req.file) {
+      receiptUrl = req.file.path || req.file.secure_url || `/uploads/receipts/${req.file.filename}`;
+    }
+
+
+    if (!receiptUrl && !gcashRefNumber) {
+      return res.status(400).json({ message: 'Please provide an updated receipt screenshot or reference number.' });
+    }
+
+    const updates = ['payment_status = "submitted"', 'admin_rejection_reason = NULL'];
+    const params = [];
+
+    if (receiptUrl) {
+      updates.push('gcash_receipt_url = ?');
+      params.push(receiptUrl);
+    }
+    if (gcashRefNumber) {
+      updates.push('gcash_ref_number = ?');
+      params.push(gcashRefNumber.trim());
+    }
+
+    params.push(id);
+
+    await pool.query(
+      `UPDATE tag_orders SET ${updates.join(', ')} WHERE order_id = ?`,
+      params
+    );
+
+    return res.json({
+      message: 'GCash payment receipt resubmitted successfully for admin verification.',
+      orderId: id,
+      paymentStatus: 'submitted'
+    });
+  } catch (error) {
+    console.error('resubmitPayment error:', error);
+    return res.status(500).json({ message: 'Failed to resubmit payment.', error: error.message });
   }
 }
 
@@ -128,7 +220,6 @@ export async function cancelOrder(req, res) {
     const userId = req.user.user_id;
     const { id } = req.params;
 
-    // Fetch the order and verify it belongs to this user
     const [rows] = await pool.query(
       'SELECT order_id, order_status FROM tag_orders WHERE order_id = ? AND user_id = ?',
       [id, userId]
@@ -140,7 +231,6 @@ export async function cancelOrder(req, res) {
 
     const order = rows[0];
 
-    // Only allow cancellation if still pending
     if (order.order_status !== 'pending') {
       return res.status(400).json({
         message: `Order cannot be cancelled because it is already "${order.order_status}". Only pending orders can be cancelled.`
@@ -148,8 +238,8 @@ export async function cancelOrder(req, res) {
     }
 
     await pool.query(
-      'UPDATE tag_orders SET order_status = ? WHERE order_id = ?',
-      ['cancelled', id]
+      'UPDATE tag_orders SET order_status = "cancelled" WHERE order_id = ?',
+      [id]
     );
 
     return res.json({
@@ -167,11 +257,22 @@ export async function cancelOrder(req, res) {
 // ==========================================
 
 /**
- * Admin retrieves all tag print orders with filtering and pagination
+ * Admin retrieves all tag print & digital orders with filtering and pagination
  */
 export async function getAdminOrders(req, res) {
   try {
-    const { status, search, dateFilter, startDate, endDate, page = 1, limit = 10 } = req.query;
+    const {
+      status,
+      paymentStatus,
+      deliveryType,
+      search,
+      dateFilter,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 10
+    } = req.query;
+
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
     const offset = (pageNum - 1) * limitNum;
@@ -184,10 +285,20 @@ export async function getAdminOrders(req, res) {
       queryParams.push(status);
     }
 
+    if (paymentStatus && paymentStatus !== 'all') {
+      whereClauses.push('o.payment_status = ?');
+      queryParams.push(paymentStatus);
+    }
+
+    if (deliveryType && deliveryType !== 'all') {
+      whereClauses.push('o.delivery_type = ?');
+      queryParams.push(deliveryType);
+    }
+
     if (search && search.trim()) {
-      whereClauses.push('(o.recipient_name LIKE ? OR u.email LIKE ? OR o.contact_number LIKE ?)');
+      whereClauses.push('(o.recipient_name LIKE ? OR u.email LIKE ? OR o.target_email LIKE ? OR o.contact_number LIKE ? OR o.gcash_ref_number LIKE ?)');
       const searchTerm = `%${search.trim()}%`;
-      queryParams.push(searchTerm, searchTerm, searchTerm);
+      queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
     // Date Presets
@@ -230,86 +341,61 @@ export async function getAdminOrders(req, res) {
     const totalOrders = countResult[0].total;
 
     // Data query
-    let orders;
-    try {
-      const [rows] = await pool.query(
-        `SELECT 
-           o.order_id, 
-           o.user_id, 
-           o.recipient_name, 
-           o.contact_number, 
-           o.shipping_address, 
-           o.tag_type, 
-           o.quantity, 
-           o.order_status, 
-           o.notes, 
-           o.created_at, 
-           o.updated_at,
-           u.first_name, 
-           u.last_name, 
-           u.email,
-           q.qr_token,
-           q.status as qr_status
-         FROM tag_orders o
-         JOIN users u ON o.user_id = u.user_id
-         LEFT JOIN qr_tags q ON o.user_id = q.user_id
-         ${whereSql}
-         ORDER BY o.created_at DESC
-         LIMIT ? OFFSET ?`,
-        [...queryParams, limitNum, offset]
-      );
-      orders = rows;
-    } catch (dbErr) {
-      if (dbErr.code === 'ER_BAD_FIELD_ERROR' || dbErr.message?.includes('tag_type')) {
-        await pool.query(`
-          ALTER TABLE tag_orders 
-          ADD COLUMN tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain' AFTER shipping_address;
-        `);
-        const [rows] = await pool.query(
-          `SELECT 
-             o.order_id, 
-             o.user_id, 
-             o.recipient_name, 
-             o.contact_number, 
-             o.shipping_address, 
-             o.tag_type, 
-             o.quantity, 
-             o.order_status, 
-             o.notes, 
-             o.created_at, 
-             o.updated_at,
-             u.first_name, 
-             u.last_name, 
-             u.email,
-             q.qr_token,
-             q.status as qr_status
-           FROM tag_orders o
-           JOIN users u ON o.user_id = u.user_id
-           LEFT JOIN qr_tags q ON o.user_id = q.user_id
-           ${whereSql}
-           ORDER BY o.created_at DESC
-           LIMIT ? OFFSET ?`,
-          [...queryParams, limitNum, offset]
-        );
-        orders = rows;
-      } else {
-        throw dbErr;
-      }
-    }
+    const [orders] = await pool.query(
+      `SELECT 
+         o.order_id, 
+         o.user_id, 
+         o.delivery_type,
+         o.target_email,
+         o.recipient_name, 
+         o.contact_number, 
+         o.shipping_address, 
+         o.tag_type, 
+         o.selected_size,
+         o.custom_dimensions,
+         o.quantity, 
+         o.order_status, 
+         o.payment_status,
+         o.gcash_receipt_url,
+         o.gcash_ref_number,
+         o.admin_rejection_reason,
+         o.notes, 
+         o.created_at, 
+         o.updated_at,
+         u.first_name, 
+         u.last_name, 
+         u.email,
+         q.qr_token,
+         q.status as qr_status
+       FROM tag_orders o
+       JOIN users u ON o.user_id = u.user_id
+       LEFT JOIN qr_tags q ON o.user_id = q.user_id
+       ${whereSql}
+       ORDER BY o.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...queryParams, limitNum, offset]
+    );
 
-    // Order counts by status for metrics
+    // Order counts by status & payment for metrics
     const [statusCounts] = await pool.query(`
       SELECT 
         SUM(CASE WHEN order_status = 'pending' THEN 1 ELSE 0 END) as pendingCount,
         SUM(CASE WHEN order_status = 'processing' THEN 1 ELSE 0 END) as processingCount,
         SUM(CASE WHEN order_status = 'printed' THEN 1 ELSE 0 END) as printedCount,
-        SUM(CASE WHEN order_status = 'delivered' THEN 1 ELSE 0 END) as deliveredCount
+        SUM(CASE WHEN order_status = 'delivered' THEN 1 ELSE 0 END) as deliveredCount,
+        SUM(CASE WHEN payment_status = 'submitted' THEN 1 ELSE 0 END) as submittedPaymentCount
       FROM tag_orders
     `);
 
     return res.json({
       orders,
-      counts: statusCounts[0] || { pendingCount: 0, processingCount: 0, printedCount: 0, deliveredCount: 0 },
+      counts: statusCounts[0] || {
+        pendingCount: 0,
+        processingCount: 0,
+        printedCount: 0,
+        deliveredCount: 0,
+        submittedPaymentCount: 0
+      },
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -320,6 +406,118 @@ export async function getAdminOrders(req, res) {
   } catch (error) {
     console.error('getAdminOrders error:', error);
     return res.status(500).json({ message: 'Failed to fetch tag orders for admin.', error: error.message });
+  }
+}
+
+/**
+ * Admin confirms payment & automatically sends QR kit via Brevo email
+ */
+export async function confirmPaymentAndSendEmail(req, res) {
+  try {
+    const { id } = req.params;
+
+    const [rows] = await pool.query(
+      `SELECT 
+         o.*, 
+         u.first_name, 
+         u.last_name, 
+         u.email as user_email,
+         q.qr_token
+       FROM tag_orders o
+       JOIN users u ON o.user_id = u.user_id
+       LEFT JOIN qr_tags q ON o.user_id = q.user_id
+       WHERE o.order_id = ?`,
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Order not found.' });
+    }
+
+    const order = rows[0];
+
+    if (!order.qr_token) {
+      return res.status(400).json({ message: 'User does not have an active QR token generated.' });
+    }
+
+    const destinationEmail = order.target_email || order.user_email;
+    const recipientName = order.recipient_name || `${order.first_name} ${order.last_name}`.trim();
+
+    // 1. Dispatch Brevo Email
+    let emailResult = null;
+    try {
+      emailResult = await sendDigitalTagEmail({
+        recipientEmail: destinationEmail,
+        recipientName,
+        qrToken: order.qr_token,
+        tagType: order.tag_type,
+        selectedSize: order.selected_size,
+        customDimensions: order.custom_dimensions,
+        orderId: order.order_id
+      });
+    } catch (emailErr) {
+      console.error('Brevo email dispatch failed:', emailErr);
+      return res.status(500).json({
+        message: `Payment confirmed, but failed to send email via Brevo: ${emailErr.message}`
+      });
+    }
+
+    // 2. Update Database Order Status
+    const newOrderStatus = order.delivery_type === 'digital_email' ? 'delivered' : 'processing';
+
+    await pool.query(
+      `UPDATE tag_orders 
+       SET payment_status = 'verified', 
+           order_status = ?,
+           admin_rejection_reason = NULL
+       WHERE order_id = ?`,
+      [newOrderStatus, id]
+    );
+
+    return res.json({
+      message: `Payment verified for Order #${id}! QR kit has been delivered to ${destinationEmail}.`,
+      paymentStatus: 'verified',
+      orderStatus: newOrderStatus,
+      emailResult
+    });
+  } catch (error) {
+    console.error('confirmPaymentAndSendEmail error:', error);
+    return res.status(500).json({ message: 'Failed to verify payment and dispatch email.', error: error.message });
+  }
+}
+
+/**
+ * Admin rejects payment receipt
+ */
+export async function rejectPayment(req, res) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const rejectionReason = (reason && reason.trim())
+      ? reason.trim()
+      : 'Payment receipt could not be verified. Please check reference number and upload a clearer screenshot.';
+
+    const [result] = await pool.query(
+      `UPDATE tag_orders 
+       SET payment_status = 'rejected', 
+           admin_rejection_reason = ?
+       WHERE order_id = ?`,
+      [rejectionReason, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Order not found.' });
+    }
+
+    return res.json({
+      message: `Payment for Order #${id} marked as rejected. User notified of rejection reason.`,
+      paymentStatus: 'rejected',
+      adminRejectionReason: rejectionReason
+    });
+  } catch (error) {
+    console.error('rejectPayment error:', error);
+    return res.status(500).json({ message: 'Failed to reject payment.', error: error.message });
   }
 }
 
@@ -400,66 +598,36 @@ export async function getOrderPrintData(req, res) {
   try {
     const { id } = req.params;
 
-    let orderRows;
-    try {
-      const [rows] = await pool.query(
-        `SELECT 
-           o.order_id, 
-           o.recipient_name, 
-           o.contact_number, 
-           o.shipping_address, 
-           o.tag_type, 
-           o.quantity, 
-           o.order_status, 
-           o.created_at,
-           u.user_id,
-           u.first_name, 
-           u.middle_name, 
-           u.last_name, 
-           u.email,
-           q.qr_token,
-           q.status as qr_status
-         FROM tag_orders o
-         JOIN users u ON o.user_id = u.user_id
-         LEFT JOIN qr_tags q ON o.user_id = q.user_id
-         WHERE o.order_id = ?`,
-        [id]
-      );
-      orderRows = rows;
-    } catch (dbErr) {
-      if (dbErr.code === 'ER_BAD_FIELD_ERROR' || dbErr.message?.includes('tag_type')) {
-        await pool.query(`
-          ALTER TABLE tag_orders 
-          ADD COLUMN tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain' AFTER shipping_address;
-        `);
-        const [rows] = await pool.query(
-          `SELECT 
-             o.order_id, 
-             o.recipient_name, 
-             o.contact_number, 
-             o.shipping_address, 
-             o.tag_type, 
-             o.quantity, 
-             o.order_status, 
-             o.created_at,
-             u.user_id,
-             u.first_name, 
-             u.middle_name, 
-             u.last_name, 
-             u.email,
-             q.qr_token,
-             q.status as qr_status
-           FROM tag_orders o
-           JOIN users u ON o.user_id = u.user_id
-           LEFT JOIN qr_tags q ON o.user_id = q.user_id
-           WHERE o.order_id = ?`,
-          [id]
-        );
-        orderRows = rows;
-      } else {
-        throw dbErr;
-      }
-    }
+    const [orderRows] = await pool.query(
+      `SELECT 
+         o.order_id, 
+         o.delivery_type,
+         o.target_email,
+         o.recipient_name, 
+         o.contact_number, 
+         o.shipping_address, 
+         o.tag_type, 
+         o.selected_size,
+         o.custom_dimensions,
+         o.quantity, 
+         o.order_status, 
+         o.payment_status,
+         o.gcash_receipt_url,
+         o.gcash_ref_number,
+         o.created_at,
+         u.user_id,
+         u.first_name, 
+         u.middle_name, 
+         u.last_name, 
+         u.email,
+         q.qr_token,
+         q.status as qr_status
+       FROM tag_orders o
+       JOIN users u ON o.user_id = u.user_id
+       LEFT JOIN qr_tags q ON o.user_id = q.user_id
+       WHERE o.order_id = ?`,
+      [id]
+    );
 
     if (orderRows.length === 0) {
       return res.status(404).json({ message: 'Order not found.' });
@@ -467,7 +635,7 @@ export async function getOrderPrintData(req, res) {
 
     const order = orderRows[0];
 
-    // Also fetch basic emergency summary for print verification
+    // Fetch basic emergency summary for print verification
     const [profileRows] = await pool.query(
       'SELECT blood_type, allergies, emergency_notes FROM emergency_profiles WHERE user_id = ?',
       [order.user_id]

@@ -22,7 +22,16 @@ import {
   XCircle,
   Calendar,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Mail,
+  CreditCard,
+  Key,
+  ExternalLink,
+  Image as ImageIcon,
+  AlertTriangle,
+  X,
+  Check,
+  Send
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -39,8 +48,16 @@ export default function AdminDashboard() {
 
   // Order Management State
   const [orders, setOrders] = useState([]);
-  const [orderCounts, setOrderCounts] = useState({ pendingCount: 0, processingCount: 0, printedCount: 0, deliveredCount: 0 });
+  const [orderCounts, setOrderCounts] = useState({ 
+    pendingCount: 0, 
+    processingCount: 0, 
+    printedCount: 0, 
+    deliveredCount: 0,
+    submittedPaymentCount: 0
+  });
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [orderPaymentStatusFilter, setOrderPaymentStatusFilter] = useState('all');
+  const [orderDeliveryTypeFilter, setOrderDeliveryTypeFilter] = useState('all');
   const [orderDateFilter, setOrderDateFilter] = useState('all');
   const [orderStartDate, setOrderStartDate] = useState('');
   const [orderEndDate, setOrderEndDate] = useState('');
@@ -50,6 +67,13 @@ export default function AdminDashboard() {
   const [orderTotalPages, setOrderTotalPages] = useState(1);
   const [orderTotalOrders, setOrderTotalOrders] = useState(0);
   const [loadingOrders, setLoadingOrders] = useState(true);
+
+  // Payment Verification & Receipt Modal State
+  const [viewingReceiptOrder, setViewingReceiptOrder] = useState(null);
+  const [rejectingOrder, setRejectingOrder] = useState(null);
+  const [rejectionReasonInput, setRejectionReasonInput] = useState('');
+  const [verifyingPaymentId, setVerifyingPaymentId] = useState(null);
+  const [rejectingPaymentId, setRejectingPaymentId] = useState(null);
 
   // Print Modal State & Batch Selection
   const [selectedPrintOrderIds, setSelectedPrintOrderIds] = useState(null);
@@ -95,6 +119,8 @@ export default function AdminDashboard() {
       setLoadingOrders(true);
       const res = await tagOrderService.getAdminOrders({
         status: orderStatusFilter,
+        paymentStatus: orderPaymentStatusFilter,
+        deliveryType: orderDeliveryTypeFilter,
         search: orderSearch,
         dateFilter: orderDateFilter,
         startDate: orderDateFilter === 'custom' ? orderStartDate : undefined,
@@ -103,7 +129,13 @@ export default function AdminDashboard() {
         limit: orderLimit
       });
       setOrders(res.orders || []);
-      setOrderCounts(res.counts || { pendingCount: 0, processingCount: 0, printedCount: 0, deliveredCount: 0 });
+      setOrderCounts(res.counts || { 
+        pendingCount: 0, 
+        processingCount: 0, 
+        printedCount: 0, 
+        deliveredCount: 0,
+        submittedPaymentCount: 0
+      });
       setOrderTotalPages(res.pagination.totalPages || 1);
       setOrderTotalOrders(res.pagination.totalOrders || 0);
     } catch (err) {
@@ -119,7 +151,16 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadOrdersData();
-  }, [orderPage, orderLimit, orderStatusFilter, orderDateFilter, orderStartDate, orderEndDate]);
+  }, [
+    orderPage, 
+    orderLimit, 
+    orderStatusFilter, 
+    orderPaymentStatusFilter, 
+    orderDeliveryTypeFilter, 
+    orderDateFilter, 
+    orderStartDate, 
+    orderEndDate
+  ]);
 
   const handleUserSearchSubmit = (e) => {
     e.preventDefault();
@@ -166,6 +207,44 @@ export default function AdminDashboard() {
     }
   };
 
+  // Confirm Payment & Trigger Brevo Transactional Email
+  const handleConfirmPayment = async (order) => {
+    try {
+      setVerifyingPaymentId(order.order_id);
+      const res = await tagOrderService.confirmPaymentAndSendEmail(order.order_id);
+      toast.success(res.message || `Payment verified & email dispatched for Order #${order.order_id}!`);
+      if (viewingReceiptOrder?.order_id === order.order_id) {
+        setViewingReceiptOrder(null);
+      }
+      loadOrdersData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to verify payment & dispatch email.');
+    } finally {
+      setVerifyingPaymentId(null);
+    }
+  };
+
+  // Reject Payment with Feedback Reason
+  const handleRejectPaymentSubmit = async (e) => {
+    e.preventDefault();
+    if (!rejectingOrder) return;
+    try {
+      setRejectingPaymentId(rejectingOrder.order_id);
+      const res = await tagOrderService.rejectPayment(rejectingOrder.order_id, rejectionReasonInput);
+      toast.success(res.message || `Order #${rejectingOrder.order_id} payment rejected.`);
+      setRejectingOrder(null);
+      setRejectionReasonInput('');
+      if (viewingReceiptOrder?.order_id === rejectingOrder.order_id) {
+        setViewingReceiptOrder(null);
+      }
+      loadOrdersData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to reject payment.');
+    } finally {
+      setRejectingPaymentId(null);
+    }
+  };
+
   const handleBatchStatusUpdate = async () => {
     if (selectedOrderIds.length === 0) return;
     setBatchUpdating(true);
@@ -181,181 +260,303 @@ export default function AdminDashboard() {
     }
   };
 
+  const formatSizeLabel = (order) => {
+    if (order.selected_size === 'custom') {
+      return order.custom_dimensions ? `Custom: ${order.custom_dimensions}` : 'Custom Size';
+    }
+    const sizeMap = {
+      standard: 'Standard Size',
+      standard_keychain_30x50: 'Keychain (30×50mm)',
+      square_fob_35x35: 'Square (35×35mm)',
+      mini_compact_25x40: 'Mini (25×40mm)',
+      standard_cr80_card: 'Card (CR80: 85.6×54mm)',
+      compact_card_70x45: 'Compact Card (70×45mm)',
+      complete_bundle_all_sizes: 'Complete Bundle (All Sizes)'
+    };
+    return sizeMap[order.selected_size] || order.selected_size || 'Standard';
+  };
+
   const getStatusPill = (status) => {
     switch (status) {
       case 'pending':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">
-            <Clock className="w-3 h-3 text-amber-600" /> Pending
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">
+            <Clock className="w-3 h-3 text-amber-600" /> Pending Review
           </span>
         );
       case 'processing':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-sky-100 text-sky-800 border border-sky-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-sky-100 text-sky-800 border border-sky-200">
             <Sparkles className="w-3 h-3 text-sky-600" /> In Production
           </span>
         );
       case 'printed':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-purple-800 border border-purple-200">
-            <CheckCircle2 className="w-3 h-3 text-purple-600" /> Printed
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-purple-800 border border-purple-200">
+            <CheckCircle2 className="w-3 h-3 text-purple-600" /> Tag Printed
           </span>
         );
       case 'delivered':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
-            <Truck className="w-3 h-3 text-emerald-600" /> Delivered
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <Truck className="w-3 h-3 text-emerald-600" /> Delivered / Emailed
           </span>
         );
       case 'cancelled':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-red-100 text-red-700 border border-red-200">
-            <XCircle className="w-3 h-3 text-red-600" /> Cancelled
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-rose-100 text-rose-800 border border-rose-200">
+            <XCircle className="w-3 h-3 text-rose-600" /> Cancelled
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-700">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-700">
             {status}
           </span>
         );
     }
   };
 
+  const getPaymentBadge = (paymentStatus) => {
+    switch (paymentStatus) {
+      case 'verified':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <Check className="w-3 h-3 text-emerald-600" /> Verified
+          </span>
+        );
+      case 'rejected':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-rose-100 text-rose-800 border border-rose-200">
+            <AlertTriangle className="w-3 h-3 text-rose-600" /> Rejected
+          </span>
+        );
+      case 'submitted':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-100 text-blue-800 border border-blue-200 animate-pulse">
+            <Clock className="w-3 h-3 text-blue-600" /> Needs Review
+          </span>
+        );
+    }
+  };
+
+  const getReceiptUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const base = import.meta.env.VITE_API_URL || '';
+    const cleanBase = base.replace(/\/api\/?$/, '');
+    return `${cleanBase}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   return (
-    <>
-      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 ${selectedPrintOrderIds ? 'print:hidden' : ''}`}>
-        {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 text-white p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3.5">
-          <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
-            <ShieldCheck className="w-7 h-7" />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 print:hidden">
+      {/* Printable Sheet Modal for Admin Print Flow */}
+      {selectedPrintOrderIds && (
+        <AdminPrintModal
+          orderIds={selectedPrintOrderIds}
+          onClose={() => {
+            setSelectedPrintOrderIds(null);
+            loadOrdersData();
+          }}
+        />
+      )}
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 pb-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-extrabold uppercase tracking-wider">
+              Restricted Area
+            </span>
+            <span className="text-xs text-slate-400 font-bold">• System Level 1</span>
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black">ResQTag Admin Fulfillment Console</h1>
-            <p className="text-xs text-slate-400">Physical tag production queue, user oversight & analytics</p>
-          </div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight mt-1">Admin Command Center</h1>
+          <p className="text-xs text-slate-500">
+            GCash payment review, Brevo automated QR email dispatch, and manufacturing order pipeline
+          </p>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex p-1 bg-slate-800 rounded-2xl border border-slate-700">
+        {/* Tab Controls */}
+        <div className="flex items-center p-1.5 bg-slate-200/60 rounded-2xl border border-slate-300/50">
           <button
             onClick={() => setActiveTab('orders')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all ${
               activeTab === 'orders'
-                ? 'bg-brand-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Package className="w-4 h-4" />
-            Print Requests
-            {orderCounts.pendingCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-900 text-[10px] font-black">
-                {orderCounts.pendingCount}
+            <Package className="w-4 h-4 text-brand-600" />
+            <span>Tag & Digital Orders</span>
+            {orderCounts.submittedPaymentCount > 0 && (
+              <span className="px-2 py-0.5 bg-rose-500 text-white rounded-full text-[10px] font-extrabold animate-pulse">
+                {orderCounts.submittedPaymentCount}
               </span>
             )}
           </button>
-
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all ${
               activeTab === 'users'
-                ? 'bg-brand-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Users className="w-4 h-4" />
-            Users
+            <Users className="w-4 h-4 text-blue-600" />
+            <span>User Management</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-5">
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
-          <div className="p-3 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100">
-            <Clock className="w-5 h-5" />
+      {/* Global Statistics Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+          <div className="p-3.5 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100">
+            <Users className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Pending Review</span>
-            <span className="text-2xl font-black text-slate-900">{orderCounts.pendingCount || 0}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Citizens</span>
+            <span className="text-2xl font-black text-slate-900">{stats.totalUsers}</span>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
-          <div className="p-3 rounded-2xl bg-sky-50 text-sky-600 border border-sky-100">
-            <Sparkles className="w-5 h-5" />
+        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+          <div className="p-3.5 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+            <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">In Production</span>
-            <span className="text-2xl font-black text-slate-900">{orderCounts.processingCount || 0}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Active QR Tags</span>
+            <span className="text-2xl font-black text-slate-900">{stats.activeTags}</span>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
-          <div className="p-3 rounded-2xl bg-purple-50 text-purple-600 border border-purple-100">
-            <Printer className="w-5 h-5" />
+        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+          <div className="p-3.5 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100">
+            <Clock className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Printed Tags</span>
-            <span className="text-2xl font-black text-slate-900">{orderCounts.printedCount || 0}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Pending GCash Review</span>
+            <span className="text-2xl font-black text-amber-600">
+              {orderCounts.submittedPaymentCount || 0}
+            </span>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
-          <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100">
-            <Truck className="w-5 h-5" />
+        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+          <div className="p-3.5 rounded-2xl bg-brand-50 text-brand-600 border border-brand-100">
+            <Activity className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Delivered Kits</span>
-            <span className="text-2xl font-black text-slate-900">{orderCounts.deliveredCount || 0}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Emergency Scans</span>
+            <span className="text-2xl font-black text-slate-900">{stats.totalScans}</span>
           </div>
         </div>
       </div>
 
-      {/* TAB 1: TAG PRINT ORDERS */}
+      {/* ========================================================
+          TAB 1: TAG ORDERS, GCASH VERIFICATION & BREVO EMAIL QUEUE
+          ======================================================== */}
       {activeTab === 'orders' && (
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-          {/* Table Header Controls */}
-          <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Physical Tag Print Queue</h2>
-              <p className="text-xs text-slate-500">Review requests, print physical sheets & update delivery statuses</p>
+          {/* Orders Section Header & Filters */}
+          <div className="p-6 border-b border-slate-100 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <Package className="w-5 h-5 text-brand-600" />
+                  <span>ResQTag Order Pipeline & Payment Queue</span>
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Review GCash payments, approve to trigger Brevo email delivery, or print manufacturing badges.
+                </p>
+              </div>
+
+              {/* Status Quick Metrics */}
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+                <span className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl">
+                  Pending: {orderCounts.pendingCount || 0}
+                </span>
+                <span className="px-2.5 py-1 bg-sky-50 text-sky-800 border border-sky-200 rounded-xl">
+                  In Production: {orderCounts.processingCount || 0}
+                </span>
+                <span className="px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl">
+                  Delivered / Emailed: {orderCounts.deliveredCount || 0}
+                </span>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-              {/* Status Filter Dropdown */}
-              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs">
+            {/* Filter Bar */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              {/* Payment Filter */}
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                <span className="text-[11px] font-semibold text-slate-400">Payment:</span>
+                <select
+                  value={orderPaymentStatusFilter}
+                  onChange={(e) => {
+                    setOrderPaymentStatusFilter(e.target.value);
+                    setOrderPage(1);
+                  }}
+                  className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                >
+                  <option value="all">All Payments</option>
+                  <option value="submitted">Needs Review (GCash Uploaded)</option>
+                  <option value="verified">Verified</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+
+              {/* Delivery Type Filter */}
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                <span className="text-[11px] font-semibold text-slate-400">Delivery:</span>
+                <select
+                  value={orderDeliveryTypeFilter}
+                  onChange={(e) => {
+                    setOrderDeliveryTypeFilter(e.target.value);
+                    setOrderPage(1);
+                  }}
+                  className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                >
+                  <option value="all">All Types</option>
+                  <option value="digital_email">Digital QR to Email</option>
+                  <option value="physical_shipping">Physical Shipping</option>
+                </select>
+              </div>
+
+              {/* Order Status Filter */}
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
                 <Filter className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-[11px] font-semibold text-slate-400">Status:</span>
                 <select
                   value={orderStatusFilter}
                   onChange={(e) => {
                     setOrderStatusFilter(e.target.value);
                     setOrderPage(1);
                   }}
-                  className="bg-transparent border-none text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                  className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
                 >
                   <option value="all">All Statuses</option>
                   <option value="pending">Pending Review</option>
                   <option value="processing">In Production</option>
-                  <option value="printed">Printed</option>
-                  <option value="delivered">Delivered</option>
+                  <option value="printed">Tag Printed</option>
+                  <option value="delivered">Delivered / Emailed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
 
-              {/* Date Filter Dropdown */}
-              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs">
+              {/* Date Filter */}
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-[11px] font-semibold text-slate-400">Date:</span>
                 <select
                   value={orderDateFilter}
                   onChange={(e) => {
                     setOrderDateFilter(e.target.value);
                     setOrderPage(1);
                   }}
-                  className="bg-transparent border-none text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                  className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
                 >
-                  <option value="all">All Dates</option>
+                  <option value="all">All Time</option>
                   <option value="today">Today</option>
                   <option value="yesterday">Yesterday</option>
                   <option value="last_7_days">Last 7 Days</option>
@@ -365,46 +566,6 @@ export default function AdminDashboard() {
                 </select>
               </div>
 
-              {/* Custom Date Range Inputs */}
-              {orderDateFilter === 'custom' && (
-                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs">
-                  <span className="text-[11px] font-semibold text-slate-400">From:</span>
-                  <input
-                    type="date"
-                    value={orderStartDate}
-                    onChange={(e) => {
-                      setOrderStartDate(e.target.value);
-                      setOrderPage(1);
-                    }}
-                    className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
-                  />
-                  <span className="text-[11px] font-semibold text-slate-400">To:</span>
-                  <input
-                    type="date"
-                    value={orderEndDate}
-                    onChange={(e) => {
-                      setOrderEndDate(e.target.value);
-                      setOrderPage(1);
-                    }}
-                    className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
-                  />
-                  {(orderStartDate || orderEndDate) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOrderStartDate('');
-                        setOrderEndDate('');
-                        setOrderPage(1);
-                      }}
-                      className="text-[11px] text-rose-600 hover:text-rose-700 font-bold ml-1"
-                      title="Clear custom dates"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-              )}
-
               {/* Search Form */}
               <form onSubmit={handleOrderSearchSubmit} className="relative flex-1 sm:w-64">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -412,17 +573,16 @@ export default function AdminDashboard() {
                   type="text"
                   value={orderSearch}
                   onChange={(e) => setOrderSearch(e.target.value)}
-                  placeholder="Search recipient, email, phone..."
-                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                  placeholder="Search recipient, email, phone, ref #..."
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium text-slate-900"
                 />
               </form>
             </div>
           </div>
 
-          {/* Batch Actions Toolbar (When 1 or more orders are checked) */}
+          {/* Batch Actions Toolbar */}
           {selectedOrderIds.length > 0 && (
-            <div className="mx-6 mb-2 p-3 px-4 bg-slate-900 border border-slate-700 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-md">
-              {/* Left: selection indicator */}
+            <div className="mx-6 my-3 p-3 px-4 bg-slate-900 border border-slate-700 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-md">
               <div className="flex items-center gap-2.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-brand-500 animate-pulse" />
                 <span className="font-bold text-white">
@@ -436,11 +596,9 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-              {/* Right: action buttons */}
               <div className="flex flex-wrap items-center gap-2">
-                {/* Batch Status Update */}
                 <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-600 rounded-xl px-2 py-1">
-                  <span className="text-slate-400 font-semibold text-[11px] whitespace-nowrap">Set status →</span>
+                  <span className="text-slate-400 font-semibold text-[11px]">Set status →</span>
                   <select
                     value={batchStatusValue}
                     onChange={(e) => setBatchStatusValue(e.target.value)}
@@ -458,18 +616,10 @@ export default function AdminDashboard() {
                   disabled={batchUpdating}
                   className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl text-xs shadow-sm transition-all disabled:opacity-60"
                 >
-                  {batchUpdating ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  )}
+                  {batchUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                   Apply to All
                 </button>
 
-                {/* Divider */}
-                <span className="text-slate-600 hidden sm:inline">|</span>
-
-                {/* Batch Print */}
                 <button
                   onClick={() => setSelectedPrintOrderIds(selectedOrderIds)}
                   className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
@@ -488,8 +638,8 @@ export default function AdminDashboard() {
           ) : orders.length === 0 ? (
             <div className="p-12 text-center text-xs text-slate-500 space-y-1">
               <Package className="w-8 h-8 text-slate-300 mx-auto" />
-              <p className="font-bold text-slate-700">No print requests found</p>
-              <p className="text-slate-400">Incoming tag orders submitted by users will appear in this queue.</p>
+              <p className="font-bold text-slate-700">No matching orders found</p>
+              <p className="text-slate-400">Incoming digital requests and physical orders will appear in this queue.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -512,104 +662,175 @@ export default function AdminDashboard() {
                       />
                     </th>
                     <th className="p-4">Order ID</th>
-                    <th className="p-4">Customer & Recipient</th>
-                    <th className="p-4">Format</th>
-                    <th className="p-4">Quantity</th>
-                    <th className="p-4">Delivery Address</th>
+                    <th className="p-4">Recipient & Delivery</th>
+                    <th className="p-4">Format & Dimensions</th>
+                    <th className="p-4">GCash Receipt</th>
+                    <th className="p-4">Payment</th>
                     <th className="p-4">Status</th>
-                    <th className="p-4">Requested</th>
-                    <th className="p-4 text-right">Actions</th>
+                    <th className="p-4 text-right">Verification & Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {orders.map((order) => (
-                    <tr
-                      key={order.order_id}
-                      className={`hover:bg-slate-50/60 transition-colors ${
-                        selectedOrderIds.includes(order.order_id) ? 'bg-rose-50/30' : ''
-                      }`}
-                    >
-                      <td className="p-4 w-10">
-                        <input
-                          type="checkbox"
-                          checked={selectedOrderIds.includes(order.order_id)}
-                          onChange={() => {
-                            setSelectedOrderIds((prev) =>
-                              prev.includes(order.order_id)
-                                ? prev.filter((id) => id !== order.order_id)
-                                : [...prev, order.order_id]
-                            );
-                          }}
-                          className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer w-4 h-4"
-                        />
-                      </td>
+                  {orders.map((order) => {
+                    const receiptUrl = getReceiptUrl(order.gcash_receipt_url);
+                    const isDigital = order.delivery_type === 'digital_email';
 
-                      <td className="p-4 font-mono font-bold text-slate-900">
-                        #{order.order_id}
-                      </td>
+                    return (
+                      <tr
+                        key={order.order_id}
+                        className={`hover:bg-slate-50/60 transition-colors ${
+                          selectedOrderIds.includes(order.order_id) ? 'bg-rose-50/30' : ''
+                        }`}
+                      >
+                        <td className="p-4 w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedOrderIds.includes(order.order_id)}
+                            onChange={() => {
+                              setSelectedOrderIds((prev) =>
+                                prev.includes(order.order_id)
+                                  ? prev.filter((id) => id !== order.order_id)
+                                  : [...prev, order.order_id]
+                              );
+                            }}
+                            className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer w-4 h-4"
+                          />
+                        </td>
 
-                      <td className="p-4">
-                        <span className="font-bold text-slate-900 block">
-                          {order.recipient_name}
-                        </span>
-                        <span className="text-[11px] text-slate-500 block">
-                          {order.contact_number} • {order.email}
-                        </span>
-                      </td>
+                        <td className="p-4 font-mono font-bold text-slate-900">
+                          #{order.order_id}
+                        </td>
 
-                      <td className="p-4">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-100 text-slate-800 border border-slate-200">
-                          {order.tag_type === 'keychain' ? '🔑 Keychain' : order.tag_type === 'wallet_card' ? '💳 Wallet Card' : '⭐ Complete Kit'}
-                        </span>
-                      </td>
+                        <td className="p-4 max-w-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-slate-900">{order.recipient_name}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase ${
+                              isDigital ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {isDigital ? 'Digital' : 'Shipping'}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 block truncate">
+                            {isDigital ? (order.target_email || order.email) : order.shipping_address}
+                          </span>
+                          <span className="text-[10px] text-slate-400 block font-mono">
+                            {order.contact_number}
+                          </span>
+                        </td>
 
-                      <td className="p-4 font-bold text-slate-900">
-                        {order.quantity}x
-                      </td>
+                        <td className="p-4">
+                          <span className="font-bold text-slate-800 block text-xs">
+                            {order.quantity}x {order.tag_type === 'keychain' ? 'Keychain' : order.tag_type === 'wallet_card' ? 'Wallet Card' : 'Bundle'}
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-mono block">
+                            {formatSizeLabel(order)}
+                          </span>
+                        </td>
 
-                      <td className="p-4 max-w-xs text-slate-700 truncate" title={order.shipping_address}>
-                        {order.shipping_address}
-                      </td>
+                        {/* GCash Receipt Column */}
+                        <td className="p-4">
+                          {receiptUrl ? (
+                            <button
+                              type="button"
+                              onClick={() => setViewingReceiptOrder(order)}
+                              className="flex items-center gap-2 p-1.5 pr-3 bg-blue-50 hover:bg-blue-100/80 border border-blue-200 rounded-xl transition-all text-blue-900 group"
+                            >
+                              <img
+                                src={receiptUrl}
+                                alt="Receipt"
+                                className="w-8 h-8 object-cover rounded-lg border border-blue-200 shrink-0"
+                              />
+                              <div className="text-left">
+                                <span className="font-bold text-[11px] block group-hover:underline">
+                                  View Receipt
+                                </span>
+                                {order.gcash_ref_number && (
+                                  <span className="text-[10px] font-mono text-blue-700 block">
+                                    Ref: {order.gcash_ref_number}
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          ) : (
+                            <span className="text-slate-400 text-[11px] italic">No receipt image</span>
+                          )}
+                        </td>
 
-                      <td className="p-4">
-                        {getStatusPill(order.order_status)}
-                      </td>
+                        {/* Payment Status Column */}
+                        <td className="p-4">
+                          {getPaymentBadge(order.payment_status)}
+                        </td>
 
-                      <td className="p-4 text-slate-500">
-                        {new Date(order.created_at).toLocaleDateString()}
-                      </td>
+                        {/* Order Status Column */}
+                        <td className="p-4">
+                          {getStatusPill(order.order_status)}
+                        </td>
 
-                      <td className="p-4 text-right space-x-2">
-                        {/* Print Button */}
-                        <button
-                          onClick={() => setSelectedPrintOrderIds([order.order_id])}
-                          disabled={order.order_status === 'cancelled'}
-                          title={order.order_status === 'cancelled' ? 'Cannot print a cancelled order' : 'Print this tag'}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 font-bold rounded-xl text-[11px] shadow transition-all ${
-                            order.order_status === 'cancelled'
-                              ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
-                              : 'bg-slate-900 hover:bg-slate-800 text-white cursor-pointer'
-                          }`}
-                        >
-                          <Printer className="w-3.5 h-3.5" />
-                          Print Tag
-                        </button>
+                        {/* Actions Column */}
+                        <td className="p-4 text-right space-x-1.5">
+                          {/* Quick Verify & Send Email Button */}
+                          {order.payment_status === 'submitted' && (
+                            <button
+                              onClick={() => handleConfirmPayment(order)}
+                              disabled={verifyingPaymentId === order.order_id}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-[11px] shadow transition-all disabled:opacity-50"
+                              title="Verify payment and instantly dispatch QR kit via Brevo email"
+                            >
+                              {verifyingPaymentId === order.order_id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Send className="w-3.5 h-3.5" />
+                              )}
+                              Approve & Email
+                            </button>
+                          )}
 
-                        {/* Status Transition Quick Select */}
-                        <select
-                          value={order.order_status}
-                          onChange={(e) => handleUpdateOrderStatus(order.order_id, e.target.value)}
-                          className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300/70 rounded-xl text-[11px] font-bold text-slate-800 focus:outline-none cursor-pointer"
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="processing">In Production</option>
-                          <option value="printed">Printed</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
+                          {/* Quick Reject Button */}
+                          {order.payment_status === 'submitted' && (
+                            <button
+                              onClick={() => {
+                                setRejectingOrder(order);
+                                setRejectionReasonInput('');
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-xl text-[11px] transition-colors"
+                              title="Reject payment receipt"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              Reject
+                            </button>
+                          )}
+
+                          {/* Print Tag (For physical manufacturing) */}
+                          <button
+                            onClick={() => setSelectedPrintOrderIds([order.order_id])}
+                            disabled={order.order_status === 'cancelled'}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1.5 font-bold rounded-xl text-[11px] shadow transition-all ${
+                              order.order_status === 'cancelled'
+                                ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
+                                : 'bg-slate-900 hover:bg-slate-800 text-white'
+                            }`}
+                            title="Print physical badge"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                            Print
+                          </button>
+
+                          {/* Status Transition Quick Select */}
+                          <select
+                            value={order.order_status}
+                            onChange={(e) => handleUpdateOrderStatus(order.order_id, e.target.value)}
+                            className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300/70 rounded-xl text-[11px] font-bold text-slate-800 focus:outline-none cursor-pointer"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="processing">In Production</option>
+                            <option value="printed">Printed</option>
+                            <option value="delivered">Delivered / Emailed</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -695,22 +916,28 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* TAB 2: USER MANAGEMENT */}
+      {/* ========================================================
+          TAB 2: CITIZEN / USER MANAGEMENT
+          ======================================================== */}
       {activeTab === 'users' && (
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-slate-900">User Account Management</h2>
-              <p className="text-xs text-slate-500">Manage registered user accounts, active statuses & security</p>
+              <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-600" />
+                <span>Citizen Security Directory</span>
+              </h2>
+              <p className="text-xs text-slate-500">Manage user accounts, roles, and emergency tag authorizations</p>
             </div>
+
             <form onSubmit={handleUserSearchSubmit} className="relative w-full sm:w-72">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
                 type="text"
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
-                placeholder="Search user name or email..."
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                placeholder="Search citizen by name or email..."
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium text-slate-900"
               />
             </form>
           </div>
@@ -720,19 +947,21 @@ export default function AdminDashboard() {
               <Loader2 className="w-8 h-8 text-brand-600 animate-spin" />
             </div>
           ) : users.length === 0 ? (
-            <div className="p-12 text-center text-xs text-slate-500">
-              No registered users found matching your search query.
+            <div className="p-12 text-center text-xs text-slate-500 space-y-1">
+              <Users className="w-8 h-8 text-slate-300 mx-auto" />
+              <p className="font-bold text-slate-700">No citizens found</p>
+              <p className="text-slate-400">Try adjusting your search criteria.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-600">
                 <thead className="bg-slate-50 border-b border-slate-200 uppercase font-bold text-slate-500 text-[10px]">
                   <tr>
-                    <th className="p-4">User</th>
-                    <th className="p-4">Email</th>
-                    <th className="p-4">Account Status</th>
-                    <th className="p-4">QR Tag Status</th>
-                    <th className="p-4">Scans</th>
+                    <th className="p-4">Citizen Name</th>
+                    <th className="p-4">Contact & Email</th>
+                    <th className="p-4">Account Role</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4">Encrypted QR Token</th>
                     <th className="p-4">Registered</th>
                     <th className="p-4 text-right">Actions</th>
                   </tr>
@@ -740,69 +969,83 @@ export default function AdminDashboard() {
                 <tbody className="divide-y divide-slate-100">
                   {users.map((u) => (
                     <tr key={u.user_id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="p-4 font-bold text-slate-900">
-                        {u.first_name} {u.last_name}
-                        {u.role === 'admin' && (
-                          <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-amber-100 text-amber-800">
-                            Admin
-                          </span>
-                        )}
+                      <td className="p-4">
+                        <span className="font-bold text-slate-900 block">
+                          {u.first_name} {u.middle_name} {u.last_name}
+                        </span>
                       </td>
-                      <td className="p-4 text-slate-700">{u.email}</td>
+
+                      <td className="p-4">
+                        <span className="font-semibold text-slate-800 block">{u.email}</span>
+                        <span className="text-[11px] text-slate-500 block font-mono">
+                          {u.contact_number || 'No contact phone'}
+                        </span>
+                      </td>
+
                       <td className="p-4">
                         <span
-                          className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
+                            u.role === 'admin'
+                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {u.role}
+                        </span>
+                      </td>
+
+                      <td className="p-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                             u.account_status === 'active'
                               ? 'bg-emerald-100 text-emerald-800'
                               : 'bg-rose-100 text-rose-800'
                           }`}
                         >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              u.account_status === 'active' ? 'bg-emerald-600' : 'bg-rose-600'
+                            }`}
+                          />
                           {u.account_status}
                         </span>
                       </td>
-                      <td className="p-4">
+
+                      <td className="p-4 font-mono font-bold text-slate-600 text-[11px]">
                         {u.qr_token ? (
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                              u.qr_status === 'active'
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'bg-slate-100 text-slate-600'
-                            }`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full ${u.qr_status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                            {u.qr_status}
+                          <span className="bg-slate-100 px-2 py-1 rounded-md border border-slate-200 text-slate-800">
+                            RQ-{u.qr_token.slice(0, 8).toUpperCase()}
                           </span>
                         ) : (
-                          <span className="text-slate-400 italic">No tag</span>
+                          <span className="text-slate-400">None</span>
                         )}
                       </td>
-                      <td className="p-4 font-semibold text-slate-800">{u.scan_count || 0}</td>
+
                       <td className="p-4 text-slate-500">
                         {new Date(u.created_at).toLocaleDateString()}
                       </td>
-                      <td className="p-4 text-right space-x-2">
-                        {u.role !== 'admin' && (
-                          <>
-                            <button
-                              onClick={() => handleToggleUserStatus(u)}
-                              className={`p-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                                u.account_status === 'active'
-                                  ? 'text-amber-600 hover:bg-amber-50'
-                                  : 'text-emerald-600 hover:bg-emerald-50'
-                              }`}
-                              title={u.account_status === 'active' ? 'Suspend Account' : 'Activate Account'}
-                            >
-                              <Power className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(u.user_id)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                              title="Delete User"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
+
+                      <td className="p-4 text-right space-x-1.5">
+                        <button
+                          onClick={() => handleToggleUserStatus(u)}
+                          disabled={u.role === 'admin'}
+                          className={`p-2 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                            u.account_status === 'active'
+                              ? 'text-rose-600 hover:bg-rose-50'
+                              : 'text-emerald-600 hover:bg-emerald-50'
+                          }`}
+                          title={u.account_status === 'active' ? 'Suspend Account' : 'Activate Account'}
+                        >
+                          <Power className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(u.user_id)}
+                          disabled={u.role === 'admin'}
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Delete Citizen Record"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -813,43 +1056,35 @@ export default function AdminDashboard() {
 
           {/* User Pagination */}
           {userTotalPages > 1 && (
-            <div className="p-4 px-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-slate-500">
-              <span>Page <strong className="text-slate-800 font-bold">{userPage}</strong> of <strong className="text-slate-800 font-bold">{userTotalPages}</strong></span>
+            <div className="p-4 px-6 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
+              <span>
+                Page {userPage} of {userTotalPages}
+              </span>
               <div className="flex items-center gap-1">
                 <button
                   disabled={userPage <= 1}
                   onClick={() => setUserPage((p) => Math.max(1, p - 1))}
                   className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  title="Previous Page"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-
-                {getPageNumbers(userPage, userTotalPages).map((pageNum, idx) =>
-                  pageNum === '...' ? (
-                    <span key={`dots-user-${idx}`} className="px-2 py-1 text-slate-400 font-bold">
-                      ...
-                    </span>
-                  ) : (
-                    <button
-                      key={`page-user-${pageNum}`}
-                      onClick={() => setUserPage(pageNum)}
-                      className={`min-w-[32px] h-8 px-2 rounded-lg font-bold text-xs transition-all ${
-                        userPage === pageNum
-                          ? 'bg-brand-600 text-white shadow-sm'
-                          : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  )
-                )}
-
+                {Array.from({ length: userTotalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <button
+                    key={`user-page-${pageNum}`}
+                    onClick={() => setUserPage(pageNum)}
+                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                      userPage === pageNum
+                        ? 'bg-brand-600 text-white'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
                 <button
                   disabled={userPage >= userTotalPages}
                   onClick={() => setUserPage((p) => Math.min(userTotalPages, p + 1))}
                   className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  title="Next Page"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -858,19 +1093,178 @@ export default function AdminDashboard() {
           )}
         </div>
       )}
-      </div>
 
-      {/* Admin Print Modal (Single or Batch) */}
-      {selectedPrintOrderIds && selectedPrintOrderIds.length > 0 && (
-        <AdminPrintModal
-          orderIds={selectedPrintOrderIds}
-          onClose={() => {
-            setSelectedPrintOrderIds(null);
-            setSelectedOrderIds([]);
-          }}
-          onStatusUpdated={loadOrdersData}
-        />
+      {/* ========================================================
+          GCASH RECEIPT INSPECTION MODAL
+          ======================================================== */}
+      {viewingReceiptOrder && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 relative my-8 space-y-4">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">
+                    GCash Receipt Inspection (Order #{viewingReceiptOrder.order_id})
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Recipient: <strong>{viewingReceiptOrder.recipient_name}</strong> • Destination:{' '}
+                    <strong>{viewingReceiptOrder.target_email || viewingReceiptOrder.email}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingReceiptOrder(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Receipt Summary Info */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 bg-slate-50 p-3 rounded-2xl text-xs">
+              <div>
+                <span className="text-[10px] text-slate-400 font-bold uppercase block">GCash Ref #</span>
+                <span className="font-mono font-bold text-slate-900">
+                  {viewingReceiptOrder.gcash_ref_number || 'Not specified'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-400 font-bold uppercase block">Format & Size</span>
+                <span className="font-bold text-slate-900">
+                  {viewingReceiptOrder.quantity}x {viewingReceiptOrder.tag_type} ({formatSizeLabel(viewingReceiptOrder)})
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-400 font-bold uppercase block">Payment Status</span>
+                {getPaymentBadge(viewingReceiptOrder.payment_status)}
+              </div>
+            </div>
+
+            {/* Image Preview */}
+            <div className="bg-slate-900 rounded-2xl p-2 flex items-center justify-center max-h-[480px] overflow-hidden">
+              <img
+                src={getReceiptUrl(viewingReceiptOrder.gcash_receipt_url)}
+                alt="GCash Payment Receipt"
+                className="max-h-[460px] w-auto object-contain rounded-xl shadow"
+              />
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+              <a
+                href={getReceiptUrl(viewingReceiptOrder.gcash_receipt_url)}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-bold text-blue-600 hover:underline inline-flex items-center gap-1"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Open full image in new tab
+              </a>
+
+              <div className="flex items-center gap-2">
+                {viewingReceiptOrder.payment_status !== 'rejected' && (
+                  <button
+                    onClick={() => {
+                      setRejectingOrder(viewingReceiptOrder);
+                      setRejectionReasonInput('');
+                    }}
+                    className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs transition-colors border border-rose-200"
+                  >
+                    Reject Payment
+                  </button>
+                )}
+
+                <button
+                  onClick={() => handleConfirmPayment(viewingReceiptOrder)}
+                  disabled={verifyingPaymentId === viewingReceiptOrder.order_id}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {verifyingPaymentId === viewingReceiptOrder.order_id ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Sending Brevo Email...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      Confirm Payment & Send Email
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
-    </>
+
+      {/* ========================================================
+          PAYMENT REJECTION REASON MODAL
+          ======================================================== */}
+      {rejectingOrder && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-100">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Reject GCash Payment</h3>
+                  <p className="text-[11px] text-slate-500">Order #{rejectingOrder.order_id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setRejectingOrder(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleRejectPaymentSubmit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Reason for Rejection (Visible to Citizen)
+                </label>
+                <textarea
+                  rows={3}
+                  value={rejectionReasonInput}
+                  onChange={(e) => setRejectionReasonInput(e.target.value)}
+                  placeholder="e.g. Receipt image is blurry / Reference number not found / Amount sent is incorrect. Please resubmit."
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 resize-none"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setRejectingOrder(null)}
+                  className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={rejectingPaymentId === rejectingOrder.order_id}
+                  className="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow transition-all disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {rejectingPaymentId === rejectingOrder.order_id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <XCircle className="w-3.5 h-3.5" />
+                  )}
+                  Confirm Rejection
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

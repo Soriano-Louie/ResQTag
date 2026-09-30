@@ -19,5 +19,21 @@ export const config = {
     ssl: process.env.DB_SSL === 'true' || process.env.DB_SSL === '1'
       ? { rejectUnauthorized: false }
       : false
+  },
+
+  // Brevo Transactional Email Configuration
+  brevo: {
+    apiKey: process.env.BREVO_API_KEY || '',
+    senderEmail: process.env.BREVO_SENDER_EMAIL || 'support@resqtag.com',
+    senderName: process.env.BREVO_SENDER_NAME || 'ResQTag Emergency System'
+  },
+
+  // Cloudinary Cloud Storage Configuration
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    apiKey: process.env.CLOUDINARY_API_KEY || '',
+    apiSecret: process.env.CLOUDINARY_API_SECRET || ''
   }
 };
+
+
