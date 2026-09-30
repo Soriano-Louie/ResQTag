@@ -280,7 +280,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                   )}
                 </div>
                 <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-                  Laser-engraved acrylic keychain & emergency PVC card manufactured and shipped to your address.
+                  High-quality printed & laminated emergency tag manufactured and shipped to your address.
                 </p>
               </button>
             </div>
@@ -404,9 +404,9 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-bold">Standard Rectangle/Oval</span>
-                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">30 × 50 mm</span>
+                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">3 × 5 cm</span>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Standard acrylic key tag</span>
+                  <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Standard keychain tag</span>
                 </button>
 
                 <button
@@ -420,7 +420,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-bold">Square Keychain Fob</span>
-                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">35 × 35 mm</span>
+                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">3.5 × 3.5 cm</span>
                   </div>
                   <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Ideal for backpacks & pet collars</span>
                 </button>
@@ -436,7 +436,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-bold">Mini Compact Fob</span>
-                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">25 × 40 mm</span>
+                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">2.5 × 4 cm</span>
                   </div>
                   <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Slim zipper / lanyard pull</span>
                 </button>
@@ -452,7 +452,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-bold">Custom Dimensions</span>
-                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">Custom mm</span>
+                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">Custom cm</span>
                   </div>
                   <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Specify your own dimensions</span>
                 </button>
@@ -473,9 +473,9 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-bold">Standard CR80 Card</span>
-                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">85.6 × 54 mm</span>
+                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">8.56 × 5.4 cm</span>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Standard credit card / wallet slot</span>
+                  <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Standard wallet card / ID slot</span>
                 </button>
 
                 <button
@@ -489,7 +489,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-bold">Compact Mini Card</span>
-                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">70 × 45 mm</span>
+                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">7 × 4.5 cm</span>
                   </div>
                   <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Compact badge & phone sleeve</span>
                 </button>
@@ -505,9 +505,9 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-bold">Custom Card Dimensions</span>
-                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">Custom mm</span>
+                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">Custom cm</span>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Specify width & height in millimeters</span>
+                  <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Specify width & height in centimeters</span>
                 </button>
               </div>
             )}
@@ -517,7 +517,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-slate-700 space-y-1">
                 <span className="font-bold text-xs block text-slate-900">📦 All Standard Sizes Included:</span>
                 <p className="text-[11px] text-slate-600">
-                  Your kit will include both <strong>Standard Keychain (30×50mm)</strong> and <strong>Standard Wallet Card (CR80: 85.6×54mm)</strong> print templates.
+                  Your kit will include both <strong>Standard Keychain (3×5 cm)</strong> and <strong>Standard Wallet Card (CR80: 8.56×5.4 cm)</strong> print templates.
                 </p>
               </div>
             )}
@@ -526,14 +526,14 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
             {formData.selectedSize === 'custom' && (
               <div className="pt-1">
                 <label className="font-bold text-slate-700 block mb-1">
-                  Custom Dimension Specifications (e.g. 40mm × 60mm):
+                  Custom Dimension Specifications (e.g. 4cm × 6cm):
                 </label>
                 <input
                   type="text"
                   name="customDimensions"
                   value={formData.customDimensions}
                   onChange={handleChange}
-                  placeholder="e.g. 40mm width by 60mm height"
+                  placeholder="e.g. 4cm width by 6cm height"
                   className="w-full px-3 py-2 bg-white border border-brand-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500/20 font-medium text-slate-900"
                 />
               </div>

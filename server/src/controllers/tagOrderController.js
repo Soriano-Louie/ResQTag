@@ -1,5 +1,5 @@
 import pool from '../config/db.js';
-import { sendDigitalTagEmail } from '../utils/brevoEmailService.js';
+import { sendTagOrderEmail, sendDigitalTagEmail } from '../utils/brevoEmailService.js';
 
 // ==========================================
 // USER CONTROLLERS
@@ -446,14 +446,17 @@ export async function confirmPaymentAndSendEmail(req, res) {
     // 1. Dispatch Brevo Email
     let emailResult = null;
     try {
-      emailResult = await sendDigitalTagEmail({
+      emailResult = await sendTagOrderEmail({
         recipientEmail: destinationEmail,
         recipientName,
         qrToken: order.qr_token,
         tagType: order.tag_type,
         selectedSize: order.selected_size,
         customDimensions: order.custom_dimensions,
-        orderId: order.order_id
+        orderId: order.order_id,
+        deliveryType: order.delivery_type,
+        shippingAddress: order.shipping_address,
+        contactNumber: order.contact_number
       });
     } catch (emailErr) {
       console.error('Brevo email dispatch failed:', emailErr);
@@ -474,8 +477,12 @@ export async function confirmPaymentAndSendEmail(req, res) {
       [newOrderStatus, id]
     );
 
+    const messageText = order.delivery_type === 'digital_email'
+      ? `Payment verified for Order #${id}! QR kit has been delivered to ${destinationEmail}.`
+      : `Payment verified for Order #${id}! Physical tag status updated to processing and notification sent to ${destinationEmail}.`;
+
     return res.json({
-      message: `Payment verified for Order #${id}! QR kit has been delivered to ${destinationEmail}.`,
+      message: messageText,
       paymentStatus: 'verified',
       orderStatus: newOrderStatus,
       emailResult

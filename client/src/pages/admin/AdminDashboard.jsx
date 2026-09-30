@@ -266,11 +266,11 @@ export default function AdminDashboard() {
     }
     const sizeMap = {
       standard: 'Standard Size',
-      standard_keychain_30x50: 'Keychain (30×50mm)',
-      square_fob_35x35: 'Square (35×35mm)',
-      mini_compact_25x40: 'Mini (25×40mm)',
-      standard_cr80_card: 'Card (CR80: 85.6×54mm)',
-      compact_card_70x45: 'Compact Card (70×45mm)',
+      standard_keychain_30x50: 'Keychain (3×5 cm)',
+      square_fob_35x35: 'Square (3.5×3.5 cm)',
+      mini_compact_25x40: 'Mini (2.5×4 cm)',
+      standard_cr80_card: 'Card (CR80: 8.56×5.4 cm)',
+      compact_card_70x45: 'Compact Card (7×4.5 cm)',
       complete_bundle_all_sizes: 'Complete Bundle (All Sizes)'
     };
     return sizeMap[order.selected_size] || order.selected_size || 'Standard';
