@@ -1,4 +1,4 @@
-import * as brevo from '@getbrevo/brevo';
+import { BrevoClient } from '@getbrevo/brevo';
 import QRCode from 'qrcode';
 import { config } from '../config/env.js';
 
@@ -10,9 +10,7 @@ function getBrevoClient() {
   if (!apiKey || apiKey === 'xkeysib-your_brevo_api_key_here') {
     return null;
   }
-  const apiInstance = new brevo.TransactionalEmailsApi();
-  apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, apiKey);
-  return apiInstance;
+  return new BrevoClient({ apiKey });
 }
 
 /**
@@ -173,29 +171,27 @@ export async function sendDigitalTagEmail({
       };
     }
 
-    const sendSmtpEmail = new brevo.SendSmtpEmail();
-    sendSmtpEmail.subject = `🛡️ Your Official ResQTag QR Emergency Kit (Order #${orderId})`;
-    sendSmtpEmail.htmlContent = htmlContent;
-    sendSmtpEmail.sender = {
-      name: config.brevo.senderName || 'ResQTag Emergency System',
-      email: config.brevo.senderEmail || 'support@resqtag.com'
-    };
-    sendSmtpEmail.to = [{ email: recipientEmail, name: recipientName || 'ResQTag User' }];
+    const response = await client.transactionalEmails.sendTransacEmail({
+      subject: `🛡️ Your Official ResQTag QR Emergency Kit (Order #${orderId})`,
+      htmlContent: htmlContent,
+      sender: {
+        name: config.brevo.senderName || 'ResQTag Emergency System',
+        email: config.brevo.senderEmail || 'support@resqtag.com'
+      },
+      to: [{ email: recipientEmail, name: recipientName || 'ResQTag User' }],
+      attachment: [
+        {
+          content: qrBase64,
+          name: `ResQTag-${tokenDisplay}.png`
+        }
+      ]
+    });
 
-    // Add high-resolution PNG attachment
-    sendSmtpEmail.attachment = [
-      {
-        content: qrBase64,
-        name: `ResQTag-${tokenDisplay}.png`
-      }
-    ];
-
-    const response = await client.sendTransacEmail(sendSmtpEmail);
-    console.log('✅ [Brevo Email Service] Email sent successfully:', response.body?.messageId || response);
+    console.log('✅ [Brevo Email Service] Email sent successfully:', response.messageId || response);
     return {
       success: true,
       simulated: false,
-      messageId: response.body?.messageId
+      messageId: response.messageId || (typeof response === 'string' ? response : 'delivered')
     };
   } catch (error) {
     console.error('❌ [Brevo Email Service] Error sending digital tag email:', error);
