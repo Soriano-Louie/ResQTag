@@ -6,6 +6,7 @@ import {
   resubmitPayment,
   getAdminOrders,
   confirmPaymentAndSendEmail,
+  collectCodPayment,
   rejectPayment,
   updateOrderStatus,
   batchUpdateOrderStatus,
@@ -28,6 +29,7 @@ router.put('/:id/resubmit-payment', authenticate, orderLimiter, handleReceiptUpl
 // Admin endpoints
 router.get('/admin', authenticate, requireAdmin, getAdminOrders);
 router.put('/admin/:id/confirm-payment', authenticate, requireAdmin, confirmPaymentAndSendEmail);
+router.put('/admin/:id/collect-cod', authenticate, requireAdmin, collectCodPayment);
 router.put('/admin/:id/reject-payment', authenticate, requireAdmin, rejectPayment);
 router.put('/admin/:id/status', authenticate, requireAdmin, updateOrderStatus);
 router.post('/admin/batch-status', authenticate, requireAdmin, batchUpdateOrderStatus);

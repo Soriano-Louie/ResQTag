@@ -19,7 +19,8 @@ import {
   Info,
   Maximize2,
   CreditCard,
-  Key
+  Key,
+  Banknote
 } from 'lucide-react';
 import { tagOrderService } from '../../services/tagOrderService';
 import { profileService } from '../../services/profileService';
@@ -37,6 +38,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
 
   const [formData, setFormData] = useState({
     deliveryType: 'digital_email', // 'digital_email' | 'physical_shipping'
+    paymentMethod: 'gcash', // 'gcash' | 'cod' (cod only for physical_shipping)
     targetEmail: '',
     recipientName: '',
     contactNumber: '',
@@ -85,8 +87,21 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
     autofillProfileData();
   }, [isOpen, user]);
 
+  const clearReceipt = () => {
+    setReceiptFile(null);
+    setReceiptPreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   // Adjust default size when deliveryType or tagType changes
   const handleDeliveryTypeChange = (type) => {
+    // Cash on Delivery is exclusive to physical shipping, so digital orders fall back to GCash
+    const nextPaymentMethod = type === 'physical_shipping' ? formData.paymentMethod : 'gcash';
+    if (nextPaymentMethod !== formData.paymentMethod) clearReceipt();
+
     setFormData(prev => {
       let size = prev.selectedSize;
       if (type === 'physical_shipping') {
@@ -101,10 +116,22 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
       return {
         ...prev,
         deliveryType: type,
+        paymentMethod: nextPaymentMethod,
+        gcashRefNumber: nextPaymentMethod === 'cod' ? '' : prev.gcashRefNumber,
         selectedSize: size,
         customDimensions: type === 'physical_shipping' ? '' : prev.customDimensions
       };
     });
+  };
+
+  const handlePaymentMethodChange = (method) => {
+    if (method === formData.paymentMethod) return;
+    if (method === 'cod') clearReceipt();
+    setFormData(prev => ({
+      ...prev,
+      paymentMethod: method,
+      gcashRefNumber: method === 'cod' ? '' : prev.gcashRefNumber
+    }));
   };
 
   const handleTagTypeChange = (newType) => {
@@ -127,6 +154,9 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
   };
 
   if (!isOpen) return null;
+
+  const isPhysicalDelivery = formData.deliveryType === 'physical_shipping';
+  const isCashOnDelivery = isPhysicalDelivery && formData.paymentMethod === 'cod';
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -158,10 +188,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
   };
 
   const handleRemoveReceipt = () => {
-    setReceiptFile(null);
-    if (receiptPreview) URL.revokeObjectURL(receiptPreview);
-    setReceiptPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    clearReceipt();
   };
 
   const handleSubmit = async (e) => {
@@ -182,7 +209,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
     if (formData.deliveryType === 'digital_email' && formData.selectedSize === 'custom' && !formData.customDimensions.trim()) {
       return toast.error('Please enter your custom dimensions (e.g. 4cm × 6cm).');
     }
-    if (!receiptFile) {
+    if (formData.paymentMethod === 'gcash' && !receiptFile) {
       return toast.error('Please upload your GCash payment receipt screenshot.');
     }
 
@@ -191,6 +218,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
 
       const submissionData = new FormData();
       submissionData.append('deliveryType', formData.deliveryType);
+      submissionData.append('paymentMethod', formData.paymentMethod);
       submissionData.append('targetEmail', formData.targetEmail.trim());
       submissionData.append('recipientName', formData.recipientName.trim());
       submissionData.append('contactNumber', formData.contactNumber.trim());
@@ -201,7 +229,9 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
         submissionData.append('customDimensions', formData.customDimensions.trim());
       }
       submissionData.append('quantity', formData.quantity);
-      submissionData.append('gcashRefNumber', formData.gcashRefNumber.trim());
+      if (formData.paymentMethod === 'gcash') {
+        submissionData.append('gcashRefNumber', formData.gcashRefNumber.trim());
+      }
       submissionData.append('notes', formData.notes.trim());
       if (receiptFile) {
         submissionData.append('receipt', receiptFile);
@@ -239,6 +269,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
             <h2 className="text-lg font-black text-slate-900 tracking-tight">Order Official ResQTag</h2>
             <p className="text-xs text-slate-500 truncate">
               Digital QR email delivery or physical tag kit with GCash verification
+              {isPhysicalDelivery && ' — pay by GCash or Cash on Delivery'}
             </p>
           </div>
         </div>
@@ -306,7 +337,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                   )}
                 </div>
                 <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-                  Official printed & laminated tag (square keychain or card) manufactured and shipped to your address.
+                  Official printed & laminated tag (square keychain or card) manufactured and shipped to your address. Pay via GCash or cash on delivery.
                 </p>
               </button>
             </div>
@@ -666,8 +697,79 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
             )}
           </div>
 
-          {/* 5. GCash Payment & Receipt Upload Section */}
+          {/* 5. Payment Method, Confirmation & Receipt Upload Section */}
           <div className="space-y-3 pt-2 border-t border-slate-100">
+            {/* Payment Method Selector — Cash on Delivery is offered for physical tag delivery only */}
+            {isPhysicalDelivery && (
+              <div className="space-y-2">
+                <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                  <span>5. Choose Payment Method</span>
+                  <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* GCash */}
+                  <button
+                    type="button"
+                    onClick={() => handlePaymentMethodChange('gcash')}
+                    className={`p-3.5 rounded-2xl border text-left transition-all relative ${
+                      formData.paymentMethod === 'gcash'
+                        ? 'border-brand-600 bg-brand-50/50 ring-2 ring-brand-500/20 shadow-sm'
+                        : 'border-slate-200 bg-slate-50 hover:bg-slate-100/70'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-2 rounded-xl ${formData.paymentMethod === 'gcash' ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                          <CreditCard className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="font-black text-slate-900 block text-xs">GCash</span>
+                          <span className="text-[10px] text-blue-600 font-bold">Pay Now</span>
+                        </div>
+                      </div>
+                      {formData.paymentMethod === 'gcash' && (
+                        <CheckCircle2 className="w-4 h-4 text-brand-600 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                      Send payment now and upload your receipt. Your order is queued right away while we verify it.
+                    </p>
+                  </button>
+
+                  {/* Cash on Delivery */}
+                  <button
+                    type="button"
+                    onClick={() => handlePaymentMethodChange('cod')}
+                    className={`p-3.5 rounded-2xl border text-left transition-all relative ${
+                      formData.paymentMethod === 'cod'
+                        ? 'border-brand-600 bg-brand-50/50 ring-2 ring-brand-500/20 shadow-sm'
+                        : 'border-slate-200 bg-slate-50 hover:bg-slate-100/70'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-2 rounded-xl ${formData.paymentMethod === 'cod' ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                          <Banknote className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="font-black text-slate-900 block text-xs">Cash on Delivery</span>
+                          <span className="text-[10px] text-emerald-600 font-bold">Pay on Arrival</span>
+                        </div>
+                      </div>
+                      {formData.paymentMethod === 'cod' && (
+                        <CheckCircle2 className="w-4 h-4 text-brand-600 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                      Settle in cash with our courier when the physical tag reaches your address. No receipt needed.
+                    </p>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!isCashOnDelivery && (
+              <>
             <div className="p-4 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl text-white shadow-md space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -776,6 +878,34 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-brand-500/20 font-medium text-slate-900"
               />
             </div>
+              </>
+            )}
+
+            {/* Cash on Delivery Confirmation Panel */}
+            {isCashOnDelivery && (
+              <div className="p-4 bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl text-white shadow-md space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-lg bg-white/20 text-[10px] font-black tracking-wider uppercase">
+                      Cash on Delivery
+                    </span>
+                    <span className="text-xs font-bold text-emerald-100">No payment needed now</span>
+                  </div>
+                  <Banknote className="w-5 h-5 text-emerald-100" />
+                </div>
+
+                <p className="text-[11px] text-emerald-50 leading-relaxed">
+                  1. Submit this order with no receipt or reference number required.<br />
+                  2. We manufacture your tag and dispatch it to your shipping address.<br />
+                  3. Pay our courier in cash when the package is handed over to you.
+                </p>
+
+                <div className="bg-white/10 backdrop-blur-sm px-3.5 py-2.5 rounded-xl border border-white/15 text-[11px] text-emerald-50 leading-relaxed">
+                  Please prepare the exact cash amount on the delivery date and have your ResQTag ready for the
+                  courier. Our team marks the order as paid once the courier confirms the handover.
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Notes */}
@@ -797,7 +927,9 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
           <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-2xl flex items-start gap-2 text-amber-900">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-[11px] leading-relaxed">
-              Once submitted, our admin team will verify your GCash payment screenshot. Upon confirmation, your official encrypted QR tag kit will be instantly delivered to <strong>{formData.targetEmail || 'your email'}</strong> via Brevo.
+              {isCashOnDelivery
+                ? 'Once submitted, our admin team will review your shipping details and start production. No receipt is needed — payment is collected in cash by our courier upon delivery of the physical tag.'
+                : `Once submitted, our admin team will verify your GCash payment screenshot. Upon confirmation, your official encrypted QR tag kit will be instantly delivered to ${formData.targetEmail || 'your email'} via Brevo.`}
             </p>
           </div>
 
@@ -823,7 +955,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
               ) : (
                 <>
                   <Package className="w-4 h-4" />
-                  Submit Order & Payment
+                  {isCashOnDelivery ? 'Place Order — Cash on Delivery' : 'Submit Order & Payment'}
                 </>
               )}
             </button>

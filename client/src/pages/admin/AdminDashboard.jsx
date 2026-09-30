@@ -31,7 +31,8 @@ import {
   AlertTriangle,
   X,
   Check,
-  Send
+  Send,
+  Banknote
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -53,11 +54,13 @@ export default function AdminDashboard() {
     processingCount: 0, 
     printedCount: 0, 
     deliveredCount: 0,
-    submittedPaymentCount: 0
+    submittedPaymentCount: 0,
+    codPendingCount: 0
   });
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
   const [orderPaymentStatusFilter, setOrderPaymentStatusFilter] = useState('all');
   const [orderDeliveryTypeFilter, setOrderDeliveryTypeFilter] = useState('all');
+  const [orderPaymentMethodFilter, setOrderPaymentMethodFilter] = useState('all');
   const [orderDateFilter, setOrderDateFilter] = useState('all');
   const [orderStartDate, setOrderStartDate] = useState('');
   const [orderEndDate, setOrderEndDate] = useState('');
@@ -73,6 +76,7 @@ export default function AdminDashboard() {
   const [rejectingOrder, setRejectingOrder] = useState(null);
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
   const [verifyingPaymentId, setVerifyingPaymentId] = useState(null);
+  const [collectingCodId, setCollectingCodId] = useState(null);
   const [rejectingPaymentId, setRejectingPaymentId] = useState(null);
 
   // Print Modal State & Batch Selection
@@ -121,6 +125,7 @@ export default function AdminDashboard() {
         status: orderStatusFilter,
         paymentStatus: orderPaymentStatusFilter,
         deliveryType: orderDeliveryTypeFilter,
+        paymentMethod: orderPaymentMethodFilter,
         search: orderSearch,
         dateFilter: orderDateFilter,
         startDate: orderDateFilter === 'custom' ? orderStartDate : undefined,
@@ -134,7 +139,8 @@ export default function AdminDashboard() {
         processingCount: 0, 
         printedCount: 0, 
         deliveredCount: 0,
-        submittedPaymentCount: 0
+        submittedPaymentCount: 0,
+        codPendingCount: 0
       });
       setOrderTotalPages(res.pagination.totalPages || 1);
       setOrderTotalOrders(res.pagination.totalOrders || 0);
@@ -221,6 +227,20 @@ export default function AdminDashboard() {
       toast.error(err.response?.data?.message || err.message || 'Failed to verify payment & dispatch email.');
     } finally {
       setVerifyingPaymentId(null);
+    }
+  };
+
+  // Confirm the courier collected cash for a Cash on Delivery order
+  const handleCollectCod = async (order) => {
+    try {
+      setCollectingCodId(order.order_id);
+      const res = await tagOrderService.collectCodPayment(order.order_id);
+      toast.success(res.message || `Cash on Delivery payment recorded for Order #${order.order_id}!`);
+      loadOrdersData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to record the Cash on Delivery payment.');
+    } finally {
+      setCollectingCodId(null);
     }
   };
 
@@ -317,8 +337,32 @@ export default function AdminDashboard() {
     }
   };
 
-  const getPaymentBadge = (paymentStatus) => {
-    switch (paymentStatus) {
+  const getPaymentBadge = (order) => {
+    const isCod = order.payment_method === 'cod';
+
+    if (isCod) {
+      if (order.payment_status === 'verified') {
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <Check className="w-3 h-3 text-emerald-600" /> COD Collected
+          </span>
+        );
+      }
+      if (order.payment_status === 'rejected') {
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-rose-100 text-rose-800 border border-rose-200">
+            <AlertTriangle className="w-3 h-3 text-rose-600" /> Rejected
+          </span>
+        );
+      }
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">
+          <Banknote className="w-3 h-3 text-amber-600" /> Awaiting COD
+        </span>
+      );
+    }
+
+    switch (order.payment_status) {
       case 'verified':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
@@ -444,6 +488,18 @@ export default function AdminDashboard() {
         </div>
 
         <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+          <div className="p-3.5 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+            <Banknote className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Awaiting COD Collection</span>
+            <span className="text-2xl font-black text-emerald-600">
+              {orderCounts.codPendingCount || 0}
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
           <div className="p-3.5 rounded-2xl bg-brand-50 text-brand-600 border border-brand-100">
             <Activity className="w-6 h-6" />
           </div>
@@ -468,7 +524,7 @@ export default function AdminDashboard() {
                   <span>ResQTag Order Pipeline & Payment Queue</span>
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Review GCash payments, approve to trigger Brevo email delivery, or print manufacturing badges.
+                  Review GCash receipts or collect Cash on Delivery payments, approve to trigger Brevo email delivery, or print manufacturing badges.
                 </p>
               </div>
 
@@ -501,8 +557,27 @@ export default function AdminDashboard() {
                 >
                   <option value="all">All Payments</option>
                   <option value="submitted">Needs Review (GCash Uploaded)</option>
+                  <option value="unpaid">Awaiting COD Collection</option>
                   <option value="verified">Verified</option>
                   <option value="rejected">Rejected</option>
+                </select>
+              </div>
+
+              {/* Payment Method Filter */}
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                <Banknote className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-[11px] font-semibold text-slate-400">Method:</span>
+                <select
+                  value={orderPaymentMethodFilter}
+                  onChange={(e) => {
+                    setOrderPaymentMethodFilter(e.target.value);
+                    setOrderPage(1);
+                  }}
+                  className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                >
+                  <option value="all">All Methods</option>
+                  <option value="gcash">GCash</option>
+                  <option value="cod">Cash on Delivery</option>
                 </select>
               </div>
 
@@ -674,6 +749,7 @@ export default function AdminDashboard() {
                   {orders.map((order) => {
                     const receiptUrl = getReceiptUrl(order.gcash_receipt_url);
                     const isDigital = order.delivery_type === 'digital_email';
+                    const isCod = order.payment_method === 'cod';
 
                     return (
                       <tr
@@ -708,6 +784,11 @@ export default function AdminDashboard() {
                               isDigital ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'
                             }`}>
                               {isDigital ? 'Digital' : 'Shipping'}
+                            </span>
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase ${
+                              isCod ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {isCod ? 'COD' : 'GCash'}
                             </span>
                           </div>
                           <span className="text-[11px] text-slate-500 block truncate">
@@ -751,6 +832,10 @@ export default function AdminDashboard() {
                                 )}
                               </div>
                             </button>
+                          ) : isCod ? (
+                            <span className="text-emerald-700 text-[11px] font-bold italic">
+                              No receipt — COD
+                            </span>
                           ) : (
                             <span className="text-slate-400 text-[11px] italic">No receipt image</span>
                           )}
@@ -758,7 +843,7 @@ export default function AdminDashboard() {
 
                         {/* Payment Status Column */}
                         <td className="p-4">
-                          {getPaymentBadge(order.payment_status)}
+                          {getPaymentBadge(order)}
                         </td>
 
                         {/* Order Status Column */}
@@ -769,7 +854,7 @@ export default function AdminDashboard() {
                         {/* Actions Column */}
                         <td className="p-4 text-right space-x-1.5">
                           {/* Quick Verify & Send Email Button */}
-                          {order.payment_status === 'submitted' && (
+                          {order.payment_status === 'submitted' && !isCod && (
                             <button
                               onClick={() => handleConfirmPayment(order)}
                               disabled={verifyingPaymentId === order.order_id}
@@ -785,8 +870,42 @@ export default function AdminDashboard() {
                             </button>
                           )}
 
+                          {/* Approve COD Order — releases the tag to production, cash is settled separately */}
+                          {isCod && order.order_status === 'pending' && (
+                            <button
+                              onClick={() => handleConfirmPayment(order)}
+                              disabled={verifyingPaymentId === order.order_id}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl text-[11px] shadow transition-all disabled:opacity-50"
+                              title="Approve this Cash on Delivery order and start production"
+                            >
+                              {verifyingPaymentId === order.order_id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Send className="w-3.5 h-3.5" />
+                              )}
+                              Approve Order
+                            </button>
+                          )}
+
+                          {/* Mark Cash on Delivery as Collected (after courier handover) */}
+                          {isCod && order.payment_status !== 'verified' && order.order_status !== 'cancelled' && (
+                            <button
+                              onClick={() => handleCollectCod(order)}
+                              disabled={collectingCodId === order.order_id}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-[11px] shadow transition-all disabled:opacity-50"
+                              title="Confirm the courier collected the cash payment"
+                            >
+                              {collectingCodId === order.order_id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Banknote className="w-3.5 h-3.5" />
+                              )}
+                              COD Collected
+                            </button>
+                          )}
+
                           {/* Quick Reject Button */}
-                          {order.payment_status === 'submitted' && (
+                          {order.payment_status === 'submitted' && !isCod && (
                             <button
                               onClick={() => {
                                 setRejectingOrder(order);
@@ -1140,7 +1259,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">Payment Status</span>
-                {getPaymentBadge(viewingReceiptOrder.payment_status)}
+                {getPaymentBadge(viewingReceiptOrder)}
               </div>
             </div>
 

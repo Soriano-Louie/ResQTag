@@ -28,7 +28,8 @@ import {
   UploadCloud,
   X,
   Copy,
-  Check
+  Check,
+  Banknote
 } from 'lucide-react';
 
 export default function QRPage() {
@@ -180,8 +181,32 @@ export default function QRPage() {
     }
   };
 
-  const getPaymentStatusBadge = (paymentStatus) => {
-    switch (paymentStatus) {
+  const getPaymentStatusBadge = (order) => {
+    const isCod = order.payment_method === 'cod';
+
+    if (isCod) {
+      if (order.payment_status === 'verified') {
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <Check className="w-3 h-3 text-emerald-600" /> COD Collected
+          </span>
+        );
+      }
+      if (order.payment_status === 'rejected') {
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-rose-100 text-rose-800 border border-rose-200">
+            <AlertTriangle className="w-3 h-3 text-rose-600" /> Payment Rejected
+          </span>
+        );
+      }
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">
+          <Banknote className="w-3 h-3 text-amber-600" /> Payable on Delivery
+        </span>
+      );
+    }
+
+    switch (order.payment_status) {
       case 'verified':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
@@ -273,7 +298,15 @@ export default function QRPage() {
                         {order.delivery_type === 'digital_email' ? <Mail className="w-3 h-3" /> : <Truck className="w-3 h-3" />}
                         {order.delivery_type === 'digital_email' ? 'Digital Email Delivery' : 'Physical Shipping'}
                       </span>
-                      {getPaymentStatusBadge(order.payment_status)}
+                      <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                        order.payment_method === 'cod'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          : 'bg-blue-100 text-blue-800 border border-blue-200'
+                      }`}>
+                        {order.payment_method === 'cod' ? <Banknote className="w-3 h-3" /> : <CreditCard className="w-3 h-3" />}
+                        {order.payment_method === 'cod' ? 'Cash on Delivery' : 'GCash'}
+                      </span>
+                      {getPaymentStatusBadge(order)}
                     </div>
                     {getStatusBadge(order.order_status)}
                   </div>
@@ -303,7 +336,11 @@ export default function QRPage() {
                     <div>
                       <span className="text-[10px] text-slate-400 font-bold uppercase block">Payment & Date</span>
                       <span className="font-semibold text-slate-800 block">
-                        {order.gcash_ref_number ? `Ref: ${order.gcash_ref_number}` : 'GCash Receipt Uploaded'}
+                        {order.payment_method === 'cod'
+                          ? (order.payment_status === 'verified'
+                            ? 'COD Collected'
+                            : 'Payable on Delivery')
+                          : (order.gcash_ref_number ? `Ref: ${order.gcash_ref_number}` : 'GCash Receipt Uploaded')}
                       </span>
                       <span className="text-[11px] text-slate-500">
                         {new Date(order.created_at).toLocaleDateString()}
@@ -321,17 +358,33 @@ export default function QRPage() {
                       <p className="text-[11px] text-rose-800 leading-relaxed">
                         {order.admin_rejection_reason || 'Payment screenshot could not be verified. Please verify transaction details and resubmit.'}
                       </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setResubmitOrder(order);
-                          setResubmitRef(order.gcash_ref_number || '');
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm"
-                      >
-                        <UploadCloud className="w-3.5 h-3.5" />
-                        Resubmit GCash Receipt
-                      </button>
+                      {order.payment_method === 'cod' ? (
+                        <p className="text-[11px] text-rose-800 leading-relaxed">
+                          This order is Cash on Delivery, so no receipt is required. Our courier will collect the payment on delivery.
+                        </p>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setResubmitOrder(order);
+                            setResubmitRef(order.gcash_ref_number || '');
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm"
+                        >
+                          <UploadCloud className="w-3.5 h-3.5" />
+                          Resubmit GCash Receipt
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* COD Reminder */}
+                  {order.payment_method === 'cod' && order.payment_status === 'unpaid' && order.order_status !== 'cancelled' && (
+                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-2 text-emerald-900 text-xs">
+                      <Banknote className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>
+                        Cash on Delivery order. Please prepare the exact amount in cash for our courier at <strong>{order.shipping_address}</strong>.
+                      </span>
                     </div>
                   )}
 

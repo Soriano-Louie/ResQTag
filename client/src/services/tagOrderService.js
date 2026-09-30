@@ -37,6 +37,11 @@ export const tagOrderService = {
     return res.data;
   },
 
+  async collectCodPayment(orderId) {
+    const res = await api.put(`/tag-orders/admin/${orderId}/collect-cod`);
+    return res.data;
+  },
+
   async rejectPayment(orderId, reason) {
     const res = await api.put(`/tag-orders/admin/${orderId}/reject-payment`, { reason });
     return res.data;

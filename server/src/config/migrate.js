@@ -104,6 +104,7 @@ export async function runMigrations() {
         order_id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
         delivery_type ENUM('digital_email', 'physical_shipping') DEFAULT 'digital_email',
+        payment_method ENUM('gcash', 'cod') DEFAULT 'gcash',
         target_email VARCHAR(150) NULL,
         recipient_name VARCHAR(100) NOT NULL,
         contact_number VARCHAR(30) NOT NULL,
@@ -123,13 +124,15 @@ export async function runMigrations() {
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
         INDEX idx_order_user (user_id),
         INDEX idx_order_status (order_status),
-        INDEX idx_payment_status (payment_status)
+        INDEX idx_payment_status (payment_status),
+        INDEX idx_payment_method (payment_method)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
     // Ensure all dynamic columns exist on existing tag_orders installations
     const newColumns = [
       { name: 'delivery_type', sql: "ALTER TABLE tag_orders ADD COLUMN delivery_type ENUM('digital_email', 'physical_shipping') DEFAULT 'digital_email' AFTER user_id;" },
+      { name: 'payment_method', sql: "ALTER TABLE tag_orders ADD COLUMN payment_method ENUM('gcash', 'cod') DEFAULT 'gcash' AFTER delivery_type;" },
       { name: 'target_email', sql: "ALTER TABLE tag_orders ADD COLUMN target_email VARCHAR(150) NULL AFTER delivery_type;" },
       { name: 'tag_type', sql: "ALTER TABLE tag_orders ADD COLUMN tag_type ENUM('keychain', 'wallet_card', 'bundle') DEFAULT 'keychain' AFTER shipping_address;" },
       { name: 'selected_size', sql: "ALTER TABLE tag_orders ADD COLUMN selected_size VARCHAR(100) DEFAULT 'standard' AFTER tag_type;" },

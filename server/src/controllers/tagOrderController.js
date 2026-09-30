@@ -16,6 +16,7 @@ export async function createOrder(req, res) {
       contactNumber,
       shippingAddress,
       deliveryType = 'digital_email',
+      paymentMethod = 'gcash',
       targetEmail,
       tagType = 'keychain',
       selectedSize = 'standard',
@@ -34,6 +35,10 @@ export async function createOrder(req, res) {
 
     const chosenDeliveryType = deliveryType === 'physical_shipping' ? 'physical_shipping' : 'digital_email';
     const emailToUse = (targetEmail || req.user.email || '').trim();
+
+    // Cash on Delivery is only offered for physical tag shipments
+    const isCashOnDelivery = chosenDeliveryType === 'physical_shipping' && paymentMethod === 'cod';
+    const chosenPaymentMethod = isCashOnDelivery ? 'cod' : 'gcash';
 
     if (chosenDeliveryType === 'digital_email' && !emailToUse) {
       return res.status(400).json({
@@ -64,10 +69,18 @@ export async function createOrder(req, res) {
 
     // Handle receipt upload from multer / Cloudinary
     let receiptUrl = null;
-    if (req.file) {
-      receiptUrl = req.file.path || req.file.secure_url || `/uploads/receipts/${req.file.filename}`;
-    } else if (req.body.gcashReceiptUrl) {
-      receiptUrl = req.body.gcashReceiptUrl.trim();
+    if (!isCashOnDelivery) {
+      if (req.file) {
+        receiptUrl = req.file.path || req.file.secure_url || `/uploads/receipts/${req.file.filename}`;
+      } else if (req.body.gcashReceiptUrl) {
+        receiptUrl = req.body.gcashReceiptUrl.trim();
+      }
+    }
+
+    if (chosenPaymentMethod === 'gcash' && !receiptUrl) {
+      return res.status(400).json({
+        message: 'A GCash payment receipt is required to verify your payment.'
+      });
     }
 
 
@@ -83,19 +96,21 @@ export async function createOrder(req, res) {
       });
     }
 
-    const cleanRef = gcashRefNumber ? gcashRefNumber.trim() : null;
+    const cleanRef = chosenPaymentMethod === 'gcash' && gcashRefNumber ? gcashRefNumber.trim() : null;
     const cleanNotes = notes ? notes.trim() : null;
     const cleanCustomDims = customDimensions ? customDimensions.trim() : null;
+    const initialPaymentStatus = isCashOnDelivery ? 'unpaid' : 'submitted';
 
     const [insertRes] = await pool.query(
       `INSERT INTO tag_orders (
-        user_id, delivery_type, target_email, recipient_name, contact_number, 
+        user_id, delivery_type, payment_method, target_email, recipient_name, contact_number, 
         shipping_address, tag_type, selected_size, custom_dimensions, quantity, 
         order_status, payment_status, gcash_receipt_url, gcash_ref_number, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'submitted', ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
       [
         userId,
         chosenDeliveryType,
+        chosenPaymentMethod,
         emailToUse,
         recipientName.trim(),
         contactNumber.trim(),
@@ -104,6 +119,7 @@ export async function createOrder(req, res) {
         selectedSize || 'standard',
         cleanCustomDims,
         qty,
+        initialPaymentStatus,
         receiptUrl,
         cleanRef,
         cleanNotes
@@ -113,14 +129,17 @@ export async function createOrder(req, res) {
     return res.status(201).json({
       message: chosenDeliveryType === 'digital_email'
         ? 'Digital ResQTag delivery request submitted! Our team will verify your GCash receipt and dispatch your QR templates via email.'
-        : 'Physical ResQTag order request submitted successfully!',
+        : isCashOnDelivery
+          ? 'Physical ResQTag order placed with Cash on Delivery! Please prepare the exact amount for our courier on the delivery date.'
+          : 'Physical ResQTag order request submitted successfully!',
       orderId: insertRes.insertId,
       deliveryType: chosenDeliveryType,
+      paymentMethod: chosenPaymentMethod,
       targetEmail: emailToUse,
       tagType: chosenType,
       selectedSize: selectedSize || 'standard',
       status: 'pending',
-      paymentStatus: 'submitted'
+      paymentStatus: initialPaymentStatus
     });
   } catch (error) {
     console.error('createOrder error:', error);
@@ -137,7 +156,7 @@ export async function getMyOrders(req, res) {
 
     const [orders] = await pool.query(
       `SELECT 
-         order_id, delivery_type, target_email, recipient_name, contact_number, 
+         order_id, delivery_type, payment_method, target_email, recipient_name, contact_number, 
          shipping_address, tag_type, selected_size, custom_dimensions, quantity, 
          order_status, payment_status, gcash_receipt_url, gcash_ref_number, 
          admin_rejection_reason, notes, created_at, updated_at
@@ -164,12 +183,18 @@ export async function resubmitPayment(req, res) {
     const { gcashRefNumber } = req.body;
 
     const [rows] = await pool.query(
-      'SELECT order_id, payment_status FROM tag_orders WHERE order_id = ? AND user_id = ?',
+      'SELECT order_id, payment_status, payment_method FROM tag_orders WHERE order_id = ? AND user_id = ?',
       [id, userId]
     );
 
     if (rows.length === 0) {
       return res.status(404).json({ message: 'Order not found.' });
+    }
+
+    if (rows[0].payment_method === 'cod') {
+      return res.status(400).json({
+        message: 'This order is Cash on Delivery, so no receipt is required. Payment is collected by our courier on delivery.'
+      });
     }
 
     let receiptUrl = null;
@@ -265,6 +290,7 @@ export async function getAdminOrders(req, res) {
       status,
       paymentStatus,
       deliveryType,
+      paymentMethod,
       search,
       dateFilter,
       startDate,
@@ -293,6 +319,11 @@ export async function getAdminOrders(req, res) {
     if (deliveryType && deliveryType !== 'all') {
       whereClauses.push('o.delivery_type = ?');
       queryParams.push(deliveryType);
+    }
+
+    if (paymentMethod && paymentMethod !== 'all') {
+      whereClauses.push('o.payment_method = ?');
+      queryParams.push(paymentMethod);
     }
 
     if (search && search.trim()) {
@@ -346,6 +377,7 @@ export async function getAdminOrders(req, res) {
          o.order_id, 
          o.user_id, 
          o.delivery_type,
+         o.payment_method,
          o.target_email,
          o.recipient_name, 
          o.contact_number, 
@@ -383,7 +415,8 @@ export async function getAdminOrders(req, res) {
         SUM(CASE WHEN order_status = 'processing' THEN 1 ELSE 0 END) as processingCount,
         SUM(CASE WHEN order_status = 'printed' THEN 1 ELSE 0 END) as printedCount,
         SUM(CASE WHEN order_status = 'delivered' THEN 1 ELSE 0 END) as deliveredCount,
-        SUM(CASE WHEN payment_status = 'submitted' THEN 1 ELSE 0 END) as submittedPaymentCount
+        SUM(CASE WHEN payment_status = 'submitted' THEN 1 ELSE 0 END) as submittedPaymentCount,
+        SUM(CASE WHEN payment_method = 'cod' AND payment_status = 'unpaid' THEN 1 ELSE 0 END) as codPendingCount
       FROM tag_orders
     `);
 
@@ -394,7 +427,8 @@ export async function getAdminOrders(req, res) {
         processingCount: 0,
         printedCount: 0,
         deliveredCount: 0,
-        submittedPaymentCount: 0
+        submittedPaymentCount: 0,
+        codPendingCount: 0
       },
       pagination: {
         page: pageNum,
@@ -466,30 +500,81 @@ export async function confirmPaymentAndSendEmail(req, res) {
     }
 
     // 2. Update Database Order Status
+    // COD is settled at the courier handover, so approving the order only releases it to production
+    const isCod = order.payment_method === 'cod';
     const newOrderStatus = order.delivery_type === 'digital_email' ? 'delivered' : 'processing';
+    const newPaymentStatus = isCod ? 'unpaid' : 'verified';
 
     await pool.query(
       `UPDATE tag_orders 
-       SET payment_status = 'verified', 
+       SET payment_status = ?, 
            order_status = ?,
            admin_rejection_reason = NULL
        WHERE order_id = ?`,
-      [newOrderStatus, id]
+      [newPaymentStatus, newOrderStatus, id]
     );
 
     const messageText = order.delivery_type === 'digital_email'
       ? `Payment verified for Order #${id}! QR kit has been delivered to ${destinationEmail}.`
-      : `Payment verified for Order #${id}! Physical tag status updated to processing and notification sent to ${destinationEmail}.`;
+      : isCod
+        ? `Cash on Delivery Order #${id} approved! Physical tag moved to production and dispatch notice sent to ${destinationEmail}.`
+        : `Payment verified for Order #${id}! Physical tag status updated to processing and notification sent to ${destinationEmail}.`;
 
     return res.json({
       message: messageText,
-      paymentStatus: 'verified',
+      paymentStatus: newPaymentStatus,
       orderStatus: newOrderStatus,
       emailResult
     });
   } catch (error) {
     console.error('confirmPaymentAndSendEmail error:', error);
     return res.status(500).json({ message: 'Failed to verify payment and dispatch email.', error: error.message });
+  }
+}
+
+/**
+ * Admin confirms the courier collected the cash for a Cash on Delivery order
+ */
+export async function collectCodPayment(req, res) {
+  try {
+    const { id } = req.params;
+
+    const [rows] = await pool.query(
+      'SELECT order_id, payment_method, order_status FROM tag_orders WHERE order_id = ?',
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Order not found.' });
+    }
+
+    const order = rows[0];
+
+    if (order.payment_method !== 'cod') {
+      return res.status(400).json({ message: 'Only Cash on Delivery orders can be settled this way.' });
+    }
+
+    if (order.order_status === 'cancelled') {
+      return res.status(400).json({ message: 'Cancelled orders cannot be settled.' });
+    }
+
+    await pool.query(
+      `UPDATE tag_orders 
+       SET payment_status = 'verified', 
+           order_status = 'delivered',
+           admin_rejection_reason = NULL
+       WHERE order_id = ?`,
+      [id]
+    );
+
+    return res.json({
+      message: `Cash on Delivery payment collected for Order #${id}! Order marked as delivered.`,
+      paymentStatus: 'verified',
+      orderStatus: 'delivered'
+    });
+  } catch (error) {
+    console.error('collectCodPayment error:', error);
+    return res.status(500).json({ message: 'Failed to record the Cash on Delivery payment.', error: error.message });
   }
 }
 
@@ -609,6 +694,7 @@ export async function getOrderPrintData(req, res) {
       `SELECT 
          o.order_id, 
          o.delivery_type,
+         o.payment_method,
          o.target_email,
          o.recipient_name, 
          o.contact_number, 
