@@ -22,8 +22,9 @@ function formatTagSizeLabel(tagType, selectedSize, customDimensions) {
   }
   const sizeMap = {
     standard: 'Standard Size',
-    standard_keychain_30x50: 'Standard Keychain (3cm x 5cm)',
+    square_fob_30x30: 'Square Keychain Fob (3cm x 3cm)',
     square_fob_35x35: 'Square Keychain Fob (3.5cm x 3.5cm)',
+    standard_keychain_30x50: 'Rectangle Keychain (3cm x 5cm)',
     mini_compact_25x40: 'Mini Compact Keychain (2.5cm x 4cm)',
     standard_cr80_card: 'Standard Wallet Card (CR80: 8.56cm x 5.4cm)',
     compact_card_70x45: 'Compact ID Card (7cm x 4.5cm)',

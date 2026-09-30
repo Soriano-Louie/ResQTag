@@ -85,15 +85,38 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
     autofillProfileData();
   }, [isOpen, user]);
 
-  // Adjust default size when tagType changes
+  // Adjust default size when deliveryType or tagType changes
+  const handleDeliveryTypeChange = (type) => {
+    setFormData(prev => {
+      let size = prev.selectedSize;
+      if (type === 'physical_shipping') {
+        if (prev.tagType === 'keychain') size = 'square_fob_30x30';
+        else if (prev.tagType === 'wallet_card') size = 'standard_cr80_card';
+        else size = 'standard';
+      } else {
+        if (prev.tagType === 'keychain') size = 'standard_keychain_30x50';
+        else if (prev.tagType === 'wallet_card') size = 'standard_cr80_card';
+        else size = 'complete_bundle_all_sizes';
+      }
+      return {
+        ...prev,
+        deliveryType: type,
+        selectedSize: size,
+        customDimensions: type === 'physical_shipping' ? '' : prev.customDimensions
+      };
+    });
+  };
+
   const handleTagTypeChange = (newType) => {
     let defaultSize = 'standard';
-    if (newType === 'keychain') {
-      defaultSize = 'standard_keychain_30x50';
-    } else if (newType === 'wallet_card') {
-      defaultSize = 'standard_cr80_card';
-    } else if (newType === 'bundle') {
-      defaultSize = 'complete_bundle_all_sizes';
+    if (formData.deliveryType === 'physical_shipping') {
+      if (newType === 'keychain') defaultSize = 'square_fob_30x30';
+      else if (newType === 'wallet_card') defaultSize = 'standard_cr80_card';
+      else defaultSize = 'standard';
+    } else {
+      if (newType === 'keychain') defaultSize = 'standard_keychain_30x50';
+      else if (newType === 'wallet_card') defaultSize = 'standard_cr80_card';
+      else if (newType === 'bundle') defaultSize = 'complete_bundle_all_sizes';
     }
     setFormData(prev => ({
       ...prev,
@@ -156,6 +179,9 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
     if (formData.deliveryType === 'physical_shipping' && !formData.shippingAddress.trim()) {
       return toast.error('Please enter the complete delivery address.');
     }
+    if (formData.deliveryType === 'digital_email' && formData.selectedSize === 'custom' && !formData.customDimensions.trim()) {
+      return toast.error('Please enter your custom dimensions (e.g. 4cm × 6cm).');
+    }
     if (!receiptFile) {
       return toast.error('Please upload your GCash payment receipt screenshot.');
     }
@@ -171,7 +197,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
       submissionData.append('shippingAddress', formData.shippingAddress.trim());
       submissionData.append('tagType', formData.tagType);
       submissionData.append('selectedSize', formData.selectedSize);
-      if (formData.selectedSize === 'custom') {
+      if (formData.deliveryType === 'digital_email' && formData.selectedSize === 'custom') {
         submissionData.append('customDimensions', formData.customDimensions.trim());
       }
       submissionData.append('quantity', formData.quantity);
@@ -212,7 +238,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
           <div className="min-w-0 flex-1 pr-6">
             <h2 className="text-lg font-black text-slate-900 tracking-tight">Order Official ResQTag</h2>
             <p className="text-xs text-slate-500 truncate">
-              Digital QR email delivery or physical acrylic kit with GCash verification
+              Digital QR email delivery or physical tag kit with GCash verification
             </p>
           </div>
         </div>
@@ -229,7 +255,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
               {/* Digital Email Delivery */}
               <button
                 type="button"
-                onClick={() => setFormData(p => ({ ...p, deliveryType: 'digital_email' }))}
+                onClick={() => handleDeliveryTypeChange('digital_email')}
                 className={`p-3.5 rounded-2xl border text-left transition-all relative ${
                   formData.deliveryType === 'digital_email'
                     ? 'border-brand-600 bg-brand-50/50 ring-2 ring-brand-500/20 shadow-sm'
@@ -243,7 +269,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                     </div>
                     <div>
                       <span className="font-black text-slate-900 block text-xs">Digital QR to Email</span>
-                      <span className="text-[10px] text-brand-600 font-bold">Fastest Delivery</span>
+                      <span className="text-[10px] text-brand-600 font-bold">Custom Print & DIY</span>
                     </div>
                   </div>
                   {formData.deliveryType === 'digital_email' && (
@@ -251,14 +277,14 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                   )}
                 </div>
                 <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-                  High-res printable QR code & templates sent straight to your email inbox once payment is approved.
+                  High-res printable QR code & templates with custom dimensions sent straight to your email inbox.
                 </p>
               </button>
 
               {/* Physical Acrylic Kit */}
               <button
                 type="button"
-                onClick={() => setFormData(p => ({ ...p, deliveryType: 'physical_shipping' }))}
+                onClick={() => handleDeliveryTypeChange('physical_shipping')}
                 className={`p-3.5 rounded-2xl border text-left transition-all relative ${
                   formData.deliveryType === 'physical_shipping'
                     ? 'border-brand-600 bg-brand-50/50 ring-2 ring-brand-500/20 shadow-sm'
@@ -272,7 +298,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                     </div>
                     <div>
                       <span className="font-black text-slate-900 block text-xs">Physical Tag Delivery</span>
-                      <span className="text-[10px] text-slate-500 font-bold">Courier Shipping</span>
+                      <span className="text-[10px] text-slate-500 font-bold">Standard Manufactured Size</span>
                     </div>
                   </div>
                   {formData.deliveryType === 'physical_shipping' && (
@@ -280,24 +306,11 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                   )}
                 </div>
                 <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-                  High-quality printed & laminated emergency tag manufactured and shipped to your address.
+                  Official printed & laminated tag (square keychain or card) manufactured and shipped to your address.
                 </p>
               </button>
             </div>
           </div>
-
-          {/* Info Banner for Digital Email Delivery */}
-          {formData.deliveryType === 'digital_email' && (
-            <div className="p-3.5 bg-sky-50/80 border border-sky-200/80 rounded-2xl flex items-start gap-2.5 text-sky-950">
-              <Info className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
-              <div className="space-y-1 text-[11px] leading-relaxed">
-                <p className="font-bold text-sky-900">About Digital Email QR Delivery:</p>
-                <p className="text-sky-800">
-                  You will receive an official Brevo email containing <strong>high-resolution (1000px) print-ready vector QR codes</strong> tailored to your selected keychain or card size, along with DIY self-printing and lamination guides.
-                </p>
-              </div>
-            </div>
-          )}
 
           {/* 2. Format Selection */}
           <div className="space-y-2">
@@ -380,165 +393,195 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
             </div>
           </div>
 
-          {/* 3. Preset Sizing Choices */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
-                <span>3. Select Preferred Dimensions</span>
-                <span className="text-rose-500">*</span>
-              </label>
-              <span className="text-[10px] text-slate-400">Standard print-ready scales</span>
+          {/* 3. Sizing Section: Conditional for Physical Delivery vs Digital Email Delivery */}
+          {formData.deliveryType === 'physical_shipping' ? (
+            /* Physical Delivery: Fixed Standard Manufacturing Dimensions */
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-800 text-xs">3. Physical Manufacturing Specifications</span>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Fixed Standard Scale
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-600 leading-relaxed">
+                {formData.tagType === 'keychain' && (
+                  <p>
+                    🏷️ <strong>Square Acrylic Keychain:</strong> Manufactured as a standard <strong>3.0 × 3.0 cm square tag</strong> fitted securely inside a transparent acrylic keychain fob.
+                  </p>
+                )}
+                {formData.tagType === 'wallet_card' && (
+                  <p>
+                    💳 <strong>Emergency Wallet Card:</strong> Manufactured in standard ISO CR80 format (<strong>8.56 × 5.40 cm</strong>), thermally laminated to fit credit card wallet slots.
+                  </p>
+                )}
+                {formData.tagType === 'bundle' && (
+                  <p>
+                    📦 <strong>Complete Kit:</strong> Includes both the <strong>Square Keychain Tag (3.0 × 3.0 cm)</strong> and <strong>Standard Wallet Card (8.56 × 5.40 cm)</strong>.
+                  </p>
+                )}
+              </div>
             </div>
-
-            {/* Keychain Sizes */}
-            {formData.tagType === 'keychain' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFormData(p => ({ ...p, selectedSize: 'standard_keychain_30x50' }))}
-                  className={`p-2.5 rounded-xl border text-left transition-all ${
-                    formData.selectedSize === 'standard_keychain_30x50'
-                      ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
-                      : 'border-slate-200 bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold">Standard Rectangle/Oval</span>
-                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">3 × 5 cm</span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Standard keychain tag</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFormData(p => ({ ...p, selectedSize: 'square_fob_35x35' }))}
-                  className={`p-2.5 rounded-xl border text-left transition-all ${
-                    formData.selectedSize === 'square_fob_35x35'
-                      ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
-                      : 'border-slate-200 bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold">Square Keychain Fob</span>
-                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">3.5 × 3.5 cm</span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Ideal for backpacks & pet collars</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFormData(p => ({ ...p, selectedSize: 'mini_compact_25x40' }))}
-                  className={`p-2.5 rounded-xl border text-left transition-all ${
-                    formData.selectedSize === 'mini_compact_25x40'
-                      ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
-                      : 'border-slate-200 bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold">Mini Compact Fob</span>
-                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">2.5 × 4 cm</span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Slim zipper / lanyard pull</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFormData(p => ({ ...p, selectedSize: 'custom' }))}
-                  className={`p-2.5 rounded-xl border text-left transition-all ${
-                    formData.selectedSize === 'custom'
-                      ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
-                      : 'border-slate-200 bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold">Custom Dimensions</span>
-                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">Custom cm</span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Specify your own dimensions</span>
-                </button>
-              </div>
-            )}
-
-            {/* Wallet Card Sizes */}
-            {formData.tagType === 'wallet_card' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFormData(p => ({ ...p, selectedSize: 'standard_cr80_card' }))}
-                  className={`p-2.5 rounded-xl border text-left transition-all ${
-                    formData.selectedSize === 'standard_cr80_card'
-                      ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
-                      : 'border-slate-200 bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold">Standard CR80 Card</span>
-                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">8.56 × 5.4 cm</span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Standard wallet card / ID slot</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFormData(p => ({ ...p, selectedSize: 'compact_card_70x45' }))}
-                  className={`p-2.5 rounded-xl border text-left transition-all ${
-                    formData.selectedSize === 'compact_card_70x45'
-                      ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
-                      : 'border-slate-200 bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold">Compact Mini Card</span>
-                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">7 × 4.5 cm</span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Compact badge & phone sleeve</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFormData(p => ({ ...p, selectedSize: 'custom' }))}
-                  className={`p-2.5 rounded-xl border text-left transition-all sm:col-span-2 ${
-                    formData.selectedSize === 'custom'
-                      ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
-                      : 'border-slate-200 bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold">Custom Card Dimensions</span>
-                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">Custom cm</span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Specify width & height in centimeters</span>
-                </button>
-              </div>
-            )}
-
-            {/* Bundle Sizes */}
-            {formData.tagType === 'bundle' && (
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-slate-700 space-y-1">
-                <span className="font-bold text-xs block text-slate-900">📦 All Standard Sizes Included:</span>
-                <p className="text-[11px] text-slate-600">
-                  Your kit will include both <strong>Standard Keychain (3×5 cm)</strong> and <strong>Standard Wallet Card (CR80: 8.56×5.4 cm)</strong> print templates.
-                </p>
-              </div>
-            )}
-
-            {/* Custom Dimensions Input Box */}
-            {formData.selectedSize === 'custom' && (
-              <div className="pt-1">
-                <label className="font-bold text-slate-700 block mb-1">
-                  Custom Dimension Specifications (e.g. 4cm × 6cm):
+          ) : (
+            /* Digital Email Delivery: Customizable Dimensions for DIY Self-Printing */
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                  <span>3. Select Preferred Print Dimensions</span>
+                  <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  name="customDimensions"
-                  value={formData.customDimensions}
-                  onChange={handleChange}
-                  placeholder="e.g. 4cm width by 6cm height"
-                  className="w-full px-3 py-2 bg-white border border-brand-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500/20 font-medium text-slate-900"
-                />
+                <span className="text-[10px] text-slate-400">For DIY self-printing</span>
               </div>
-            )}
-          </div>
+
+              {/* Keychain Sizes */}
+              {formData.tagType === 'keychain' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'square_fob_30x30' }))}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      formData.selectedSize === 'square_fob_30x30'
+                        ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
+                        : 'border-slate-200 bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold">Square Keychain Fob</span>
+                      <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">3 × 3 cm</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Standard acrylic fob insert</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'standard_keychain_30x50' }))}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      formData.selectedSize === 'standard_keychain_30x50'
+                        ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
+                        : 'border-slate-200 bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold">Rectangle / Oval</span>
+                      <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">3 × 5 cm</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Standard rectangular blank</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'mini_compact_25x40' }))}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      formData.selectedSize === 'mini_compact_25x40'
+                        ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
+                        : 'border-slate-200 bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold">Mini Compact Fob</span>
+                      <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">2.5 × 4 cm</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Slim zipper / lanyard pull</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'custom' }))}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      formData.selectedSize === 'custom'
+                        ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
+                        : 'border-slate-200 bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold">Custom Dimensions</span>
+                      <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">Custom cm</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Specify your own dimensions</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Wallet Card Sizes */}
+              {formData.tagType === 'wallet_card' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'standard_cr80_card' }))}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      formData.selectedSize === 'standard_cr80_card'
+                        ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
+                        : 'border-slate-200 bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold">Standard CR80 Card</span>
+                      <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">8.56 × 5.4 cm</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Standard wallet card / ID slot</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'compact_card_70x45' }))}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      formData.selectedSize === 'compact_card_70x45'
+                        ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
+                        : 'border-slate-200 bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold">Compact Mini Card</span>
+                      <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">7 × 4.5 cm</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Compact badge & phone sleeve</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'custom' }))}
+                    className={`p-2.5 rounded-xl border text-left transition-all sm:col-span-2 ${
+                      formData.selectedSize === 'custom'
+                        ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
+                        : 'border-slate-200 bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold">Custom Card Dimensions</span>
+                      <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">Custom cm</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">Specify width & height in centimeters</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Bundle Sizes */}
+              {formData.tagType === 'bundle' && (
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-slate-700 space-y-1">
+                  <span className="font-bold text-xs block text-slate-900">📦 All Standard Print Templates Included:</span>
+                  <p className="text-[11px] text-slate-600">
+                    Your digital kit includes vector templates for both <strong>Square Keychain (3×3 cm)</strong>, <strong>Rectangle Keychain (3×5 cm)</strong>, and <strong>Standard Wallet Card (CR80: 8.56×5.4 cm)</strong>.
+                  </p>
+                </div>
+              )}
+
+              {/* Custom Dimensions Input Box for Email Delivery */}
+              {formData.selectedSize === 'custom' && (
+                <div className="pt-1">
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Custom Dimension Specifications (e.g. 4cm × 6cm):
+                  </label>
+                  <input
+                    type="text"
+                    name="customDimensions"
+                    value={formData.customDimensions}
+                    onChange={handleChange}
+                    placeholder="e.g. 4cm width by 6cm height"
+                    className="w-full px-3 py-2 bg-white border border-brand-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500/20 font-medium text-slate-900"
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 4. Recipient & Contact Details */}
           <div className="space-y-3 pt-1 border-t border-slate-100">

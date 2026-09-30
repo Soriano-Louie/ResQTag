@@ -29,6 +29,8 @@ export default function AdminPrintModal({ orderId, orderIds, onClose, onStatusUp
           qr: { qr_token: res.order.qr_token, status: res.order.qr_status },
           user: { firstName: res.order.first_name, lastName: res.order.last_name },
           tagType: res.order.tag_type || 'bundle',
+          selectedSize: res.order.selected_size,
+          customDimensions: res.order.custom_dimensions,
           quantity: res.order.quantity || 1,
           orderId: res.order.order_id,
           order: res.order,
@@ -150,7 +152,11 @@ export default function AdminPrintModal({ orderId, orderIds, onClose, onStatusUp
                         <span className="font-bold text-slate-800 text-[11px] block uppercase">
                           {order.tag_type === 'keychain' ? '🔑 Keychain' : order.tag_type === 'wallet_card' ? '💳 Card' : '⭐ Kit'}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-bold">{order.quantity}x</span>
+                        <span className="text-[10px] font-mono text-slate-500 block">
+                          {order.selected_size === 'custom' && order.custom_dimensions
+                            ? `Custom: ${order.custom_dimensions}`
+                            : `${order.quantity}x`}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -179,9 +185,14 @@ export default function AdminPrintModal({ orderId, orderIds, onClose, onStatusUp
                         <span className="font-medium text-slate-800">{ordersData[0]?.shipping_address}</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Requested Format</span>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Requested Format & Scale</span>
                         <span className="font-black text-xs text-rose-600 uppercase">
                           {ordersData[0]?.tag_type === 'keychain' ? '🔑 Keychain Tag' : ordersData[0]?.tag_type === 'wallet_card' ? '💳 Wallet Card' : '⭐ Complete Kit'}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-500 block">
+                          {ordersData[0]?.selected_size === 'custom' && ordersData[0]?.custom_dimensions
+                            ? `Custom: ${ordersData[0]?.custom_dimensions}`
+                            : ordersData[0]?.selected_size || 'Standard Scale'}
                         </span>
                       </div>
                     </div>
