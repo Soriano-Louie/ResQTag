@@ -11,7 +11,18 @@ async function startServer() {
   const isDbConnected = await testDbConnection();
   if (isDbConnected) {
     try {
-      await runMigrations();
+      const summary = await runMigrations();
+
+      // Individual statements are isolated inside runMigrations, so a partial
+      // failure no longer throws. Report it explicitly instead — otherwise a
+      // skipped CREATE TABLE would look like a healthy deploy until the affected
+      // feature 500s at runtime.
+      if (summary && summary.success === false) {
+        console.error('🚨 Migrations incomplete. Failed steps:', summary.failures.map((f) => f.label).join(', '));
+        if (summary.missingTables.length > 0) {
+          console.error('🚨 Missing tables:', summary.missingTables.join(', '));
+        }
+      }
     } catch (migErr) {
       console.warn('⚠️ Warning: Auto-migration encountered an error:', migErr.message);
     }

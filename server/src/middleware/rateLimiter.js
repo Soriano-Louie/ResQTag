@@ -61,3 +61,28 @@ export const orderLimiter = rateLimit({
     message: 'Order submission rate limit exceeded. Please wait a few minutes.'
   }
 });
+
+/**
+ * Email Change Limiter (request code + confirm code)
+ * 20 requests per 15 minutes per IP.
+ *
+ * Deliberately looser than authLimiter (10/15min): the email change flow needs
+ * several legitimate calls in a row (request code, resend, confirm), and 10 would
+ * lock users out mid-flow.
+ *
+ * Code brute force is NOT primarily defended by this limiter — a 6-digit code has
+ * only 1,000,000 combinations. That is handled per-account by the attempts
+ * column in email_change_verifications, which invalidates the request after 5
+ * wrong guesses. This limiter is a coarse second layer against bulk automated
+ * spraying across many accounts.
+ */
+export const emailChangeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    status: 429,
+    message: 'Too many email change attempts. Please wait 15 minutes before trying again.'
+  }
+});

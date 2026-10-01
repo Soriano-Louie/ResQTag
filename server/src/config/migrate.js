@@ -1,13 +1,56 @@
 import pool from './db.js';
 import bcrypt from 'bcryptjs';
 
+/**
+ * Tables the application cannot function without. Verified after every migration
+ * run so a silently-skipped statement is visible in the deploy logs instead of
+ * surfacing later as a runtime 500 on one unlucky endpoint.
+ */
+const REQUIRED_TABLES = [
+  'users',
+  'emergency_profiles',
+  'emergency_contacts',
+  'privacy_settings',
+  'qr_tags',
+  'tag_orders',
+  'email_change_verifications'
+];
+
 export async function runMigrations() {
   console.log('🔄 Running database migrations...');
-  try {
-    const connection = await pool.getConnection();
 
+  let connection;
+  try {
+    connection = await pool.getConnection();
+  } catch (err) {
+    // Without a connection there is nothing to isolate — surface it to the caller.
+    console.error('❌ Could not obtain a database connection for migrations:', err.message);
+    throw err;
+  }
+
+  const failures = [];
+
+  /**
+   * Runs one migration statement in isolation.
+   *
+   * Previously every statement shared one try/catch, so a single failure aborted
+   * every statement after it — a transient metadata-lock error on an early
+   * CREATE TABLE silently skipped all later tables. Each step is now independent
+   * and the failures are collected for reporting at the end.
+   */
+  const step = async (label, fn) => {
+    try {
+      return await fn();
+    } catch (error) {
+      failures.push({ label, message: error.message });
+      console.warn(`⚠️ Migration step failed [${label}]: ${error.message}`);
+      return null;
+    }
+  };
+
+  try {
     // 1. Users table
-    await connection.query(`
+    await step('create users table', () => connection.query(`
       CREATE TABLE IF NOT EXISTS users (
         user_id INT AUTO_INCREMENT PRIMARY KEY,
         first_name VARCHAR(50) NOT NULL,
@@ -21,10 +64,10 @@ export async function runMigrations() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_user_email (email)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
+    `));
 
     // 2. Emergency profiles table
-    await connection.query(`
+    await step('create emergency_profiles table', () => connection.query(`
       CREATE TABLE IF NOT EXISTS emergency_profiles (
         profile_id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL UNIQUE,
@@ -42,17 +85,15 @@ export async function runMigrations() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
+    `));
 
     // Ensure blood_type has sufficient length in existing databases
-    try {
-      await connection.query(`ALTER TABLE emergency_profiles MODIFY COLUMN blood_type VARCHAR(50) NULL;`);
-    } catch (e) {
-      // Ignore if column already matches or table freshly created
-    }
+    await step('widen emergency_profiles.blood_type', () => connection.query(
+      `ALTER TABLE emergency_profiles MODIFY COLUMN blood_type VARCHAR(50) NULL;`
+    ));
 
     // 3. Emergency contacts table
-    await connection.query(`
+    await step('create emergency_contacts table', () => connection.query(`
       CREATE TABLE IF NOT EXISTS emergency_contacts (
         contact_id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
@@ -67,10 +108,10 @@ export async function runMigrations() {
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
         INDEX idx_contact_user (user_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
+    `));
 
     // 4. Privacy settings table
-    await connection.query(`
+    await step('create privacy_settings table', () => connection.query(`
       CREATE TABLE IF NOT EXISTS privacy_settings (
         privacy_id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
@@ -80,10 +121,10 @@ export async function runMigrations() {
         UNIQUE KEY uq_user_field (user_id, field_name),
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
+    `));
 
     // 5. QR tags table
-    await connection.query(`
+    await step('create qr_tags table', () => connection.query(`
       CREATE TABLE IF NOT EXISTS qr_tags (
         qr_id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL UNIQUE,
@@ -96,10 +137,10 @@ export async function runMigrations() {
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
         INDEX idx_qr_token (qr_token)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
+    `));
 
     // 6. Tag orders table (Physical tag print & digital delivery requests)
-    await connection.query(`
+    await step('create tag_orders table', () => connection.query(`
       CREATE TABLE IF NOT EXISTS tag_orders (
         order_id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
@@ -127,7 +168,7 @@ export async function runMigrations() {
         INDEX idx_payment_status (payment_status),
         INDEX idx_payment_method (payment_method)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
+    `));
 
     // Ensure all dynamic columns exist on existing tag_orders installations
     const newColumns = [
@@ -146,10 +187,10 @@ export async function runMigrations() {
     for (const col of newColumns) {
       try {
         const [colCheck] = await connection.query(`
-          SELECT COLUMN_NAME 
-          FROM information_schema.COLUMNS 
-          WHERE TABLE_SCHEMA = DATABASE() 
-            AND TABLE_NAME = 'tag_orders' 
+          SELECT COLUMN_NAME
+          FROM information_schema.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'tag_orders'
             AND COLUMN_NAME = ?;
         `, [col.name]);
 
@@ -158,44 +199,122 @@ export async function runMigrations() {
           console.log(`✅ Added missing ${col.name} column to tag_orders table.`);
         }
       } catch (colErr) {
+        // Non-fatal: the ALTER is a no-op when the column is already correct.
         console.warn(`Column check note for ${col.name}:`, colErr.message);
       }
     }
 
+    // 7. Email change verification table
+    // A pending email change is only ever stored here — the users.email column is
+    // untouched until the code sent to the NEW address is confirmed. One active
+    // request per user is enforced by unique_user_id so re-requesting a code
+    // replaces (rather than stacks with) any previous pending attempt.
+    //
+    // expires_at is DATETIME, not TIMESTAMP, on purpose. With
+    // explicit_defaults_for_timestamp=OFF (the MySQL 5.x default) the first
+    // TIMESTAMP column declared without a DEFAULT silently receives both
+    // DEFAULT CURRENT_TIMESTAMP and ON UPDATE CURRENT_TIMESTAMP — which would
+    // reset expires_at to now on every `SET attempts = attempts + 1` and let a
+    // guessed code stay alive indefinitely. DATETIME never gets those implicit
+    // attributes.
+    await step('create email_change_verifications table', () => connection.query(`
+      CREATE TABLE IF NOT EXISTS email_change_verifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        new_email VARCHAR(100) NOT NULL,
+        code_hash CHAR(64) NOT NULL,
+        attempts INT DEFAULT 0,
+        expires_at DATETIME NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        UNIQUE KEY uniq_user (user_id),
+        INDEX idx_expires (expires_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `));
+
     // Seed default admin if none exists
-    const [adminCheck] = await connection.query('SELECT user_id FROM users WHERE role = ? LIMIT 1', ['admin']);
-    if (adminCheck.length === 0) {
-      const defaultAdminPass = 'Admin@123456';
-      const hash = await bcrypt.hash(defaultAdminPass, 12);
-      const [insertResult] = await connection.query(
-        `INSERT INTO users (first_name, last_name, email, password_hash, role, account_status)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        ['System', 'Admin', 'admin@resqtag.com', hash, 'admin', 'active']
+    await step('seed default admin account', async () => {
+      const [adminCheck] = await connection.query('SELECT user_id FROM users WHERE role = ? LIMIT 1', ['admin']);
+      if (adminCheck.length === 0) {
+        const defaultAdminPass = 'Admin@123456';
+        const hash = await bcrypt.hash(defaultAdminPass, 12);
+        const [insertResult] = await connection.query(
+          `INSERT INTO users (first_name, last_name, email, password_hash, role, account_status)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          ['System', 'Admin', 'admin@resqtag.com', hash, 'admin', 'active']
+        );
+        const adminId = insertResult.insertId;
+
+        // Seed admin profile
+        await connection.query('INSERT IGNORE INTO emergency_profiles (user_id) VALUES (?)', [adminId]);
+
+        // Seed admin QR tag
+        const adminQrToken = 'admin8f92a71c4d9e984b2361093a8901';
+        await connection.query("INSERT IGNORE INTO qr_tags (user_id, qr_token, status) VALUES (?, ?, 'active')", [adminId, adminQrToken]);
+
+        console.log('👤 Created default admin account: admin@resqtag.com / Admin@123456');
+      }
+    });
+
+    // ---- Verification -------------------------------------------------------
+    // Proves the statements above actually took effect. Without this, a skipped
+    // CREATE TABLE is indistinguishable from a successful deploy until a request
+    // hits an undefined table at runtime.
+    let missingTables = [];
+    try {
+      // Placeholders are built explicitly rather than using IN (?) because array
+      // expansion is driver-dependent.
+      const placeholders = REQUIRED_TABLES.map(() => '?').join(', ');
+      const [rows] = await connection.query(
+        `SELECT TABLE_NAME FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (${placeholders})`,
+        REQUIRED_TABLES
       );
-      const adminId = insertResult.insertId;
 
-      // Seed admin profile
-      await connection.query('INSERT IGNORE INTO emergency_profiles (user_id) VALUES (?)', [adminId]);
-
-      // Seed admin QR tag
-      const adminQrToken = 'admin8f92a71c4d9e984b2361093a8901';
-      await connection.query("INSERT IGNORE INTO qr_tags (user_id, qr_token, status) VALUES (?, ?, 'active')", [adminId, adminQrToken]);
-
-      console.log('👤 Created default admin account: admin@resqtag.com / Admin@123456');
+      // information_schema column casing differs between MySQL versions.
+      const present = new Set(rows.map((r) => r.TABLE_NAME || r.table_name));
+      missingTables = REQUIRED_TABLES.filter((t) => !present.has(t));
+    } catch (verifyErr) {
+      failures.push({ label: 'verify required tables', message: verifyErr.message });
+      console.warn('⚠️ Could not verify required tables:', verifyErr.message);
     }
 
+    if (missingTables.length > 0) {
+      console.error(`❌ Missing required table(s): ${missingTables.join(', ')}`);
+      console.error('❌ The affected features will fail at runtime. Check the deploy log above for the failing step.');
+    } else {
+      console.log('✅ Verified all required tables are present.');
+    }
+
+    const summary = {
+      success: failures.length === 0 && missingTables.length === 0,
+      failures,
+      missingTables
+    };
+
+    if (summary.success) {
+      console.log('✅ Database migration completed successfully.');
+    } else {
+      console.error(`❌ Database migration completed with ${failures.length} failed step(s) and ${missingTables.length} missing table(s).`);
+    }
+
+    return summary;
+  } finally {
     connection.release();
-    console.log('✅ Database migration completed successfully.');
-    return true;
-  } catch (error) {
-    console.error('❌ Migration failed:', error.message);
-    throw error;
   }
 }
 
 // Allow running directly: `node src/config/migrate.js`
 if (process.argv[1] && process.argv[1].endsWith('migrate.js')) {
   runMigrations()
-    .then(() => process.exit(0))
+    .then((summary) => {
+      // Non-zero exit on partial failure so `npm run migrate` can be used as a
+      // deployment verification step in CI or a pre-deploy check.
+      if (summary && summary.success === false) {
+        console.error('❌ Migration reported failures. Exiting with code 1.');
+        process.exit(1);
+      }
+      process.exit(0);
+    })
     .catch(() => process.exit(1));
 }

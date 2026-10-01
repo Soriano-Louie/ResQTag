@@ -459,3 +459,220 @@ export async function sendTagOrderEmail({
  */
 export const sendDigitalTagEmail = sendTagOrderEmail;
 
+/**
+ * Sends the 6-digit confirmation code to the NEW email address during an
+ * account email change.
+ *
+ * Deliberately has no links or buttons: this message only proves the recipient
+ * controls the new mailbox. Any action must be taken in the app by someone who
+ * also knows the account password.
+ *
+ * @returns {Promise<{success: boolean, simulated: boolean, messageId?: string}>}
+ */
+export async function sendEmailVerificationCodeEmail({ recipientEmail, recipientName, code, expiresInMinutes }) {
+  try {
+    const emailSubject = `${code} is your ResQTag email verification code`;
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResQTag Email Verification Code</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 0; color: #1e293b; }
+    .container { max-width: 560px; margin: 20px auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+    .header { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
+    .header h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .header p { margin: 8px 0 0; font-size: 13px; color: #94a3b8; }
+    .body { padding: 32px 30px; }
+    .text { font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 20px; }
+    .code-box { background: #f1f5f9; border: 2px dashed #cbd5e1; border-radius: 16px; padding: 26px; text-align: center; margin: 24px 0; }
+    .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 40px; font-weight: 800; letter-spacing: 10px; color: #0f172a; text-indent: 10px; }
+    .expiry { font-size: 12px; color: #64748b; text-align: center; }
+    .notice { background: #fff1f2; border: 1px solid #fecdd3; border-radius: 14px; padding: 16px 18px; margin: 24px 0; }
+    .notice p { margin: 0; font-size: 12px; line-height: 1.6; color: #9f1239; }
+    .footer { background: #f8fafc; padding: 24px 30px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Verify your new email</h1>
+      <p>Confirm this address for your ResQTag account</p>
+    </div>
+
+    <div class="body">
+      <div class="text">
+        Hi ${neutralizeDataDetectors(recipientName || 'there')}, you requested to change the email address on your ResQTag account. Enter this code in the app to confirm the change:
+      </div>
+
+      <div class="code-box">
+        <div class="code">${code}</div>
+      </div>
+      <div class="expiry">This code expires in ${expiresInMinutes} minutes.</div>
+
+      <div class="notice">
+        <p><strong>Did not request this?</strong> Ignore this email. Your current email address and password remain unchanged, and nothing has been changed on your account.</p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p style="margin: 0;">Securing lives through instant, encrypted medical and emergency profiles.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `;
+
+    const client = getBrevoClient();
+
+    if (!client) {
+      console.log('⚠️ [Brevo Email Service] BREVO_API_KEY is not configured or in dev placeholder mode.');
+      console.log(`✉️ Simulated verification email dispatched to: ${recipientEmail}`);
+      // Printed so the flow stays testable locally, but only outside production:
+      // a missing Brevo key in prod would otherwise write live codes to the logs.
+      if (config.nodeEnv !== 'production') {
+        console.log(`🔑 Email verification code: ${code}`);
+      } else {
+        console.error('🔑 Email verification code withheld from logs (production). BREVO_API_KEY must be set or users cannot complete email changes.');
+      }
+      return {
+        success: true,
+        simulated: true,
+        message: 'Brevo API key not set; verification email simulated in development mode.'
+      };
+    }
+
+    const response = await client.transactionalEmails.sendTransacEmail({
+      subject: emailSubject,
+      htmlContent: htmlContent,
+      sender: {
+        name: config.brevo.senderName || 'ResQTag Emergency System',
+        email: config.brevo.senderEmail || 'support@resqtag.com'
+      },
+      to: [{ email: recipientEmail, name: recipientName || 'ResQTag User' }]
+    });
+
+    console.log('✅ [Brevo Email Service] Verification code email sent:', response.messageId || response);
+    return {
+      success: true,
+      simulated: false,
+      messageId: response.messageId || (typeof response === 'string' ? response : 'delivered')
+    };
+  } catch (error) {
+    console.error('❌ [Brevo Email Service] Error sending verification code email:', error);
+    throw error;
+  }
+}
+
+/**
+ * Sends a security notice to the PREVIOUS email address once an email change
+ * completes.
+ *
+ * This is the account-takeover alarm: if someone hijacked a session and swapped
+ * the recovery address, the real owner still receives mail at the old address
+ * and can reset their password.
+ *
+ * @returns {Promise<{success: boolean, simulated: boolean}>}
+ */
+export async function sendEmailChangeNotificationEmail({ previousEmail, newEmail, recipientName, changedAt }) {
+  try {
+    const emailSubject = 'Security alert: your ResQTag email address was changed';
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your ResQTag email address was changed</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 0; color: #1e293b; }
+    .container { max-width: 560px; margin: 20px auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+    .header { background: linear-gradient(135deg, #7f1d1d 0%, #be123c 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
+    .header h1 { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -0.5px; }
+    .header p { margin: 8px 0 0; font-size: 13px; color: #fecdd3; }
+    .body { padding: 32px 30px; }
+    .text { font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 16px; }
+    .row { display: flex; justify-content: space-between; gap: 12px; padding: 13px 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 10px; font-size: 12px; }
+    .row span:first-child { color: #64748b; font-weight: 600; }
+    .row span:last-child { color: #0f172a; font-weight: 700; text-align: right; word-break: break-all; }
+    .notice { background: #fff1f2; border: 1px solid #fecdd3; border-radius: 14px; padding: 16px 18px; margin: 24px 0; }
+    .notice p { margin: 0; font-size: 12px; line-height: 1.6; color: #9f1239; }
+    .footer { background: #f8fafc; padding: 24px 30px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Your email address was changed</h1>
+      <p>Security notification for your ResQTag account</p>
+    </div>
+
+    <div class="body">
+      <div class="text">
+        Hi ${neutralizeDataDetectors(recipientName || 'there')}, the email address on your ResQTag account was changed successfully. This message was sent to your previous address so you are aware of the change.
+      </div>
+
+      <div class="row">
+        <span>Previous email</span>
+        <span>${neutralizeDataDetectors(previousEmail)}</span>
+      </div>
+      <div class="row">
+        <span>New email</span>
+        <span>${neutralizeDataDetectors(newEmail)}</span>
+      </div>
+      <div class="row">
+        <span>Changed on</span>
+        <span>${changedAt}</span>
+      </div>
+
+      <div class="notice">
+        <p><strong>Was this not you?</strong> Someone changed the email on your account, which means they had your password. Reset your password immediately and contact support.</p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p style="margin: 0;">Securing lives through instant, encrypted medical and emergency profiles.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `;
+
+    const client = getBrevoClient();
+
+    if (!client) {
+      console.log('⚠️ [Brevo Email Service] BREVO_API_KEY is not configured or in dev placeholder mode.');
+      console.log(`✉️ Simulated email-change notice dispatched to: ${previousEmail}`);
+      return {
+        success: true,
+        simulated: true,
+        message: 'Brevo API key not set; change notification simulated in development mode.'
+      };
+    }
+
+    const response = await client.transactionalEmails.sendTransacEmail({
+      subject: emailSubject,
+      htmlContent: htmlContent,
+      sender: {
+        name: config.brevo.senderName || 'ResQTag Emergency System',
+        email: config.brevo.senderEmail || 'support@resqtag.com'
+      },
+      to: [{ email: previousEmail, name: recipientName || 'ResQTag User' }]
+    });
+
+    console.log('✅ [Brevo Email Service] Email change notice sent:', response.messageId || response);
+    return {
+      success: true,
+      simulated: false,
+      messageId: response.messageId || (typeof response === 'string' ? response : 'delivered')
+    };
+  } catch (error) {
+    console.error('❌ [Brevo Email Service] Error sending email change notification:', error);
+    throw error;
+  }
+}
+

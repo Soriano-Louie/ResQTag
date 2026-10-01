@@ -4,10 +4,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { authService } from '../../services/authService';
 import ModalOverlay from '../../components/common/ModalOverlay';
-import { User, Lock, Trash2, ArrowLeft, Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
+import EditNameModal from '../../components/account/EditNameModal';
+import EmailChangeModal from '../../components/account/EmailChangeModal';
+import { User, Lock, Trash2, ArrowLeft, Loader2, AlertTriangle, ShieldCheck, Pencil, Mail } from 'lucide-react';
 
 export default function AccountSettings() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -23,6 +25,10 @@ export default function AccountSettings() {
   const [deletePassword, setDeletePassword] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Profile identity state (name + email)
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
@@ -49,6 +55,20 @@ export default function AccountSettings() {
     } finally {
       setPasswordLoading(false);
     }
+  };
+
+  // The AuthContext user is the single source of truth for this page, the
+  // navbar, and the header, so refetch after a change rather than trusting the
+  // response payload.
+  const handleNameChanged = async () => {
+    toast.success('Your name has been updated.');
+    await refreshUser();
+  };
+
+  const handleEmailChanged = async () => {
+    toast.success('Your email address has been updated.');
+    setShowEmailModal(false);
+    await refreshUser();
   };
 
   const handleDeleteAccount = async (e) => {
@@ -82,23 +102,52 @@ export default function AccountSettings() {
         </button>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Account Settings</h1>
-          <p className="text-xs text-slate-500">Manage your security credentials and account status</p>
+          <p className="text-xs text-slate-500">Manage your identity, security credentials, and account status</p>
         </div>
       </div>
 
       {/* Account Info Box */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-3">
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
         <h3 className="font-bold text-slate-900 text-sm">Account Overview</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div>
-            <span className="text-slate-400 block font-medium">Registered Name</span>
-            <span className="font-bold text-slate-800 text-sm">{user?.firstName} {user?.lastName}</span>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <span className="text-slate-400 block font-medium">Registered Name</span>
+              <span className="font-bold text-slate-800 text-sm break-words">
+                {user?.firstName} {user?.middleName ? `${user.middleName} ` : ''}{user?.lastName}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowNameModal(true)}
+              className="flex items-center gap-1.5 shrink-0 px-2.5 py-1.5 text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+              title="Edit your registered name"
+            >
+              <Pencil className="w-3 h-3" />
+              Edit
+            </button>
           </div>
-          <div>
-            <span className="text-slate-400 block font-medium">Account Email</span>
-            <span className="font-bold text-slate-800 text-sm">{user?.email}</span>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <span className="text-slate-400 block font-medium">Account Email</span>
+              <span className="font-bold text-slate-800 text-sm break-all">{user?.email}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowEmailModal(true)}
+              className="flex items-center gap-1.5 shrink-0 px-2.5 py-1.5 text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+              title="Change your email address"
+            >
+              <Mail className="w-3 h-3" />
+              Edit
+            </button>
           </div>
         </div>
+        <p className="text-[11px] text-slate-400 flex items-start gap-1.5 pt-1 border-t border-slate-100">
+          <ShieldCheck className="w-3.5 h-3.5 shrink-0 mt-px text-emerald-600" />
+          Changing your email requires your password plus a verification code sent to the new address.
+          Your current email stays active until the code is confirmed.
+        </p>
       </div>
 
       {/* Change Password Form */}
@@ -230,6 +279,22 @@ export default function AccountSettings() {
           </div>
       </ModalOverlay>
       )}
+
+      {/* Edit Registered Name Modal */}
+      <EditNameModal
+        isOpen={showNameModal}
+        onClose={() => setShowNameModal(false)}
+        user={user}
+        onNameChanged={handleNameChanged}
+      />
+
+      {/* Change Email Modal — password confirmation, then emailed code */}
+      <EmailChangeModal
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        currentEmail={user?.email}
+        onEmailChanged={handleEmailChanged}
+      />
     </div>
   );
 }
