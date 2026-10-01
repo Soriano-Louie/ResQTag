@@ -489,6 +489,7 @@ export async function confirmPaymentAndSendEmail(req, res) {
         customDimensions: order.custom_dimensions,
         orderId: order.order_id,
         deliveryType: order.delivery_type,
+        paymentMethod: order.payment_method,
         shippingAddress: order.shipping_address,
         contactNumber: order.contact_number
       });
@@ -556,6 +557,16 @@ export async function collectCodPayment(req, res) {
 
     if (order.order_status === 'cancelled') {
       return res.status(400).json({ message: 'Cancelled orders cannot be settled.' });
+    }
+
+    // Cash is only handed over at courier handover, so the order must have been
+    // approved (processing) and produced/printed (printed) first. Without this
+    // guard the button could settle a brand-new pending order, mark it delivered
+    // and skip the dispatch notification email entirely.
+    if (order.order_status !== 'printed') {
+      return res.status(400).json({
+        message: `Order #${id} must be approved and marked as Printed before the Cash on Delivery payment can be recorded.`
+      });
     }
 
     await pool.query(

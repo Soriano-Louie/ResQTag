@@ -45,6 +45,7 @@ export async function sendTagOrderEmail({
   customDimensions,
   orderId,
   deliveryType = 'digital_email',
+  paymentMethod = 'gcash',
   shippingAddress = '',
   contactNumber = ''
 }) {
@@ -60,6 +61,10 @@ export async function sendTagOrderEmail({
         : 'Keychain Tag';
 
     const isPhysical = deliveryType === 'physical_shipping';
+    // COD orders are approved before anything is produced, so the copy must not
+    // claim the tag is already printed. GCash approval happens after payment,
+    // which for physical orders is the "printed & ready to ship" notification.
+    const isCodPhysical = isPhysical && paymentMethod === 'cod';
 
     // Generate high-resolution QR code PNG buffer (1000x1000 px for ultra-crisp print quality)
     const qrBuffer = await QRCode.toBuffer(emergencyUrl, {
@@ -81,7 +86,9 @@ export async function sendTagOrderEmail({
     let htmlContent = '';
 
     if (isPhysical) {
-      emailSubject = `📦 Your ResQTag Has Been Printed & Is Ready for Delivery (Order #${orderId})`;
+      emailSubject = isCodPhysical
+        ? `✅ Your ResQTag Order Is Confirmed & In Production (Order #${orderId})`
+        : `📦 Your ResQTag Has Been Printed & Is Ready for Delivery (Order #${orderId})`;
       htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -117,22 +124,28 @@ export async function sendTagOrderEmail({
 <body>
   <div class="container">
     <div class="header">
-      <div class="badge">Printed & Ready for Delivery</div>
-      <h1>Your Physical Tag is Ready</h1>
-      <p>Printed, laminated & being prepared for courier dispatch</p>
+    <div class="badge">${isCodPhysical ? 'Order Confirmed · Cash on Delivery' : 'Printed & Ready for Delivery'}</div>
+    <h1>${isCodPhysical ? 'Your Tag Is Being Produced' : 'Your Physical Tag is Ready'}</h1>
+    <p>${isCodPhysical ? 'Approved and queued for printing, laminating &amp; packing' : 'Printed, laminated & being prepared for courier dispatch'}</p>
+  </div>
+
+  <div class="body">
+    <div class="greeting">Hello ${recipientName || 'Valued User'},</div>
+    <div class="text">
+      ${isCodPhysical
+        ? `Thank you for your order! Your custom ResQTag emergency tag for Order <strong>#${orderId}</strong> has been <strong>confirmed and released to production</strong>. We will email you again the moment it is printed and handed to the courier.`
+        : `Great news! Your custom ResQTag emergency tag for Order <strong>#${orderId}</strong> has been <strong>printed and laminated</strong>. It is now ready and being packaged for courier delivery to your registered shipping address.`}
     </div>
 
-    <div class="body">
-      <div class="greeting">Hello ${recipientName || 'Valued User'},</div>
-      <div class="text">
-        Great news! Your custom ResQTag emergency tag for Order <strong>#${orderId}</strong> has been <strong>printed and laminated</strong>. It is now ready and being packaged for courier delivery to your registered shipping address.
-      </div>
-
-      <table class="specs-table">
-        <tr>
-          <td class="label">Production Status:</td>
-          <td class="value"><span class="status-badge">✨ Printed & Laminated (Ready to Ship)</span></td>
-        </tr>
+    <table class="specs-table">
+      <tr>
+        <td class="label">Production Status:</td>
+        <td class="value"><span class="status-badge">${isCodPhysical ? '🛠️ Confirmed — In Production' : '✨ Printed & Laminated (Ready to Ship)'}</span></td>
+      </tr>
+      <tr>
+        <td class="label">Payment Method:</td>
+        <td class="value">${isCodPhysical ? 'Cash on Delivery (pay the courier on arrival)' : 'GCash (verified)'}</td>
+      </tr>
         <tr>
           <td class="label">Tag Format:</td>
           <td class="value">${tagFormatLabel}</td>
@@ -172,9 +185,13 @@ export async function sendTagOrderEmail({
       <div class="delivery-guide">
         <h3>🚚 What Happens Next?</h3>
         <ul>
-          <li><strong>Courier Handover:</strong> Your laminated physical tag is securely packaged and scheduled for dispatch to your address.</li>
-          <li><strong>Profile is Already Active:</strong> First responders can scan your QR code immediately. You do not need to activate anything upon delivery.</li>
-          <li><strong>Keep Details Updated:</strong> You can update your emergency contacts and medical information anytime in your dashboard without needing a new physical tag.</li>
+          ${isCodPhysical
+            ? `<li><strong>Now:</strong> Your order moves into printing and laminating. You will receive a second email once it is shipped.</li>
+               <li><strong>Cash on Delivery:</strong> Please prepare the exact amount in cash. The courier will collect it at your door — your tag profile is <strong>never</strong> withheld if you cannot pay immediately.</li>
+               <li><strong>Delivery window:</strong> Allow a few days for production plus courier transit after you receive the dispatch email.</li>`
+            : `<li><strong>Courier Handover:</strong> Your laminated physical tag is securely packaged and scheduled for dispatch to your address.</li>
+               <li><strong>Profile is Already Active:</strong> First responders can scan your QR code immediately. You do not need to activate anything upon delivery.</li>
+               <li><strong>Keep Details Updated:</strong> You can update your emergency contacts and medical information anytime in your dashboard without needing a new physical tag.</li>`}
         </ul>
       </div>
 
@@ -290,7 +307,7 @@ export async function sendTagOrderEmail({
     if (!client) {
       console.log('⚠️ [Brevo Email Service] BREVO_API_KEY is not configured or in dev placeholder mode.');
       console.log(`✉️ Simulated email dispatched to: ${recipientEmail}`);
-      console.log(`🔑 QR Token: ${tokenDisplay}, Order ID: #${orderId}, Type: ${deliveryType}`);
+      console.log(`🔑 QR Token: ${tokenDisplay}, Order ID: #${orderId}, Type: ${deliveryType}, Payment: ${paymentMethod}`);
       return {
         success: true,
         simulated: true,

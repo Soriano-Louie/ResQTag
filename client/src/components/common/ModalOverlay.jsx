@@ -3,47 +3,56 @@ import { createPortal } from 'react-dom';
 
 /**
  * Freezes page scrolling while a modal is open.
- * Uses the fixed-position technique so iOS Safari cannot scroll the page behind
- * the overlay, and restores the exact scroll position on close.
+ *
+ * Deliberately avoids the common `position: fixed` technique: fixing the body
+ * takes it out of document flow, which collapses the document height to one
+ * viewport. The browser then clamps `window.scrollY` to 0, so the page jumps to
+ * the top when the modal opens and snaps back on close.
+ *
+ * Instead the page stays laid out exactly as it was and scrolling is disabled at
+ * the source:
+ *  - `overflow: hidden` on <html> and <body> blocks wheel/trackpad/keyboard
+ *    scrolling and collapses the scrollbar.
+ *  - `touch-action: none` on <body> blocks touch scrolling. The overlay is a
+ *    child of <body>, but it re-enables vertical panning via the
+ *    `.modal-overlay { touch-action: pan-y }` rule, so only the modal scrolls.
+ *  - `overscroll-behavior: none` stops rubber-banding on iOS.
+ *
+ * Restoring the overflow values reveals the scrollbar again, so the page width
+ * is compensated with padding-right to keep the layout from shifting sideways.
  */
 function useBodyScrollLock(active) {
   useEffect(() => {
     if (!active) return;
 
-    const { body } = document;
-    const scrollY = window.scrollY;
+    const html = document.documentElement;
+    const body = document.body;
+
     const previous = {
-      position: body.style.position,
-      top: body.style.top,
-      left: body.style.left,
-      right: body.style.right,
-      width: body.style.width,
-      overflowY: body.style.overflowY,
-      paddingRight: body.style.paddingRight
+      htmlOverflow: html.style.overflow,
+      htmlOverscrollBehavior: html.style.overscrollBehavior,
+      bodyOverflow: body.style.overflow,
+      bodyTouchAction: body.style.touchAction,
+      bodyPaddingRight: body.style.paddingRight
     };
 
-    // Compensate for the removed scrollbar so the page behind does not shift
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    // Width of the scrollbar that `overflow: hidden` is about to remove
+    const scrollbarWidth = window.innerWidth - html.clientWidth;
 
-    body.style.position = 'fixed';
-    body.style.top = `-${scrollY}px`;
-    body.style.left = '0';
-    body.style.right = '0';
-    body.style.width = '100%';
-    body.style.overflowY = 'scroll';
+    html.style.overflow = 'hidden';
+    html.style.overscrollBehavior = 'none';
+    body.style.overflow = 'hidden';
+    body.style.touchAction = 'none';
     if (scrollbarWidth > 0) {
       body.style.paddingRight = `${scrollbarWidth}px`;
     }
 
     return () => {
-      body.style.position = previous.position;
-      body.style.top = previous.top;
-      body.style.left = previous.left;
-      body.style.right = previous.right;
-      body.style.width = previous.width;
-      body.style.overflowY = previous.overflowY;
-      body.style.paddingRight = previous.paddingRight;
-      window.scrollTo(0, scrollY);
+      html.style.overflow = previous.htmlOverflow;
+      html.style.overscrollBehavior = previous.htmlOverscrollBehavior;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.touchAction = previous.bodyTouchAction;
+      body.style.paddingRight = previous.bodyPaddingRight;
     };
   }, [active]);
 }

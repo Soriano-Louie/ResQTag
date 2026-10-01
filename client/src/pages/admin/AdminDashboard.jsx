@@ -888,8 +888,8 @@ export default function AdminDashboard() {
                             </button>
                           )}
 
-                          {/* Mark Cash on Delivery as Collected (after courier handover) */}
-                          {isCod && order.payment_status !== 'verified' && order.order_status !== 'cancelled' && (
+                          {/* Mark Cash on Delivery as Collected (only once the tag has been printed & dispatched) */}
+                          {isCod && order.payment_status !== 'verified' && order.order_status === 'printed' && (
                             <button
                               onClick={() => handleCollectCod(order)}
                               disabled={collectingCodId === order.order_id}
@@ -903,6 +903,17 @@ export default function AdminDashboard() {
                               )}
                               COD Collected
                             </button>
+                          )}
+
+                          {/* Pending-order hint: cash is settled at courier handover, not at approval */}
+                          {isCod && order.order_status === 'processing' && order.payment_status !== 'verified' && (
+                            <span
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-700 font-bold rounded-xl text-[11px]"
+                              title="Cash on Delivery is settled with the courier. Mark the order as Printed once it has been produced and dispatched."
+                            >
+                              <Banknote className="w-3.5 h-3.5" />
+                              Awaiting COD
+                            </span>
                           )}
 
                           {/* Quick Reject Button */}
