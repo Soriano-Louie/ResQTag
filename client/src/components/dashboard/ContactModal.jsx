@@ -5,19 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import ModalOverlay from '../common/ModalOverlay';
 import { isValidEmail, CONTACT_EMAIL_MAX_LENGTH } from '../../utils/validation';
 
-const RELATIONSHIPS = [
-  'Parent',
-  'Guardian',
-  'Spouse',
-  'Partner',
-  'Child',
-  'Sibling',
-  'Relative',
-  'Friend',
-  'Doctor',
-  'Caregiver',
-  'Other'
-];
+import { RELATIONSHIPS } from '../../utils/relationships';
 
 export default function ContactModal({ isOpen, onClose, contact, onSaved }) {
   const toast = useToast();

@@ -12,6 +12,7 @@ import {
   Menu, 
   X,
   LayoutDashboard,
+  Users,
   ShieldCheck
 } from 'lucide-react';
 
@@ -75,7 +76,18 @@ export default function Navbar() {
                   <LayoutDashboard className="w-4 h-4 text-brand-400" />
                   Dashboard
                 </Link>
-                <Link to="/family" className="text-white px-3 py-2">Family members</Link>
+                <Link
+                  to="/family"
+                  aria-current={isActive('/family') ? 'page' : undefined}
+                  className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-all ${
+                    isActive('/family')
+                      ? 'bg-slate-800 text-white shadow-inner'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <Users className="w-4 h-4 text-brand-400 shrink-0" />
+                  Family Members
+                </Link>
 
                 <Link
                   to="/qr"
@@ -185,7 +197,17 @@ export default function Navbar() {
                 <LayoutDashboard className="w-5 h-5 text-brand-400" />
                 Dashboard
               </Link>
-              <Link to="/family" onClick={() => setMobileMenuOpen(false)} className="text-white block px-4 py-3">Family members</Link>
+              <Link
+                to="/family"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-current={isActive('/family') ? 'page' : undefined}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  isActive('/family') ? 'bg-slate-800 text-white shadow-inner' : 'text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                <Users className="w-5 h-5 text-brand-400" />
+                Family Members
+              </Link>
               <Link
                 to="/qr"
                 onClick={() => setMobileMenuOpen(false)}
