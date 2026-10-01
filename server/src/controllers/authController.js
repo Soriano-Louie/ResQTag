@@ -15,6 +15,11 @@ import {
   sendEmailVerificationCodeEmail,
   sendEmailChangeNotificationEmail
 } from '../utils/brevoEmailService.js';
+import {
+  isValidEmail,
+  sanitizeEmail,
+  USER_EMAIL_MAX_LENGTH
+} from '../utils/emailValidation.js';
 
 const COOKIE_NAME = 'resqtag_token';
 
@@ -52,12 +57,17 @@ export async function register(req, res) {
       return res.status(400).json({ message: 'Passwords do not match.' });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (typeof email === 'string' && email.trim().length > USER_EMAIL_MAX_LENGTH) {
+      return res.status(400).json({ message: `Email address must be ${USER_EMAIL_MAX_LENGTH} characters or fewer.` });
+    }
+
+    // Whitelist-format check: only email-legal characters are accepted, which
+    // also rejects script/HTML payloads before they can reach the database.
+    if (!isValidEmail(email, USER_EMAIL_MAX_LENGTH)) {
       return res.status(400).json({ message: 'Please provide a valid email address.' });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail = sanitizeEmail(email, USER_EMAIL_MAX_LENGTH);
 
     // Check existing email
     const [existing] = await connection.query('SELECT user_id FROM users WHERE email = ?', [cleanEmail]);
@@ -135,7 +145,11 @@ export async function login(req, res) {
       return res.status(400).json({ message: 'Email and password are required.' });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
+    if (!isValidEmail(email, USER_EMAIL_MAX_LENGTH)) {
+      return res.status(400).json({ message: 'Please provide a valid email address.' });
+    }
+
+    const cleanEmail = sanitizeEmail(email, USER_EMAIL_MAX_LENGTH);
 
     const [rows] = await pool.query(
       'SELECT user_id, first_name, middle_name, last_name, email, password_hash, role, account_status FROM users WHERE email = ?',
@@ -381,17 +395,17 @@ export async function requestEmailChange(req, res) {
       return res.status(400).json({ message: 'Password and new email address are required.' });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newEmail)) {
+    if (typeof newEmail === 'string' && newEmail.trim().length > USER_EMAIL_MAX_LENGTH) {
+      return res.status(400).json({ message: `Email address must be ${USER_EMAIL_MAX_LENGTH} characters or fewer.` });
+    }
+
+    // Whitelist-format check (same rule as register/login).
+    if (!isValidEmail(newEmail, USER_EMAIL_MAX_LENGTH)) {
       return res.status(400).json({ message: 'Please provide a valid email address.' });
     }
 
     // Normalize exactly like register/login so casing can never create duplicates.
-    const cleanEmail = newEmail.trim().toLowerCase();
-
-    if (cleanEmail.length > 100) {
-      return res.status(400).json({ message: 'Email address must be 100 characters or fewer.' });
-    }
+    const cleanEmail = sanitizeEmail(newEmail, USER_EMAIL_MAX_LENGTH);
 
     // Compare against a lowercased current value too — older rows may not have
     // been stored lowercase, and without this the guard would miss and email a

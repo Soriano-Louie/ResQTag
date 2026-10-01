@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { ShieldAlert, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
+import { isValidEmail, USER_EMAIL_MAX_LENGTH } from '../../utils/validation';
 
 export default function Login() {
   const { login } = useAuth();
@@ -21,6 +22,11 @@ export default function Login() {
     e.preventDefault();
     if (!email.trim() || !password) {
       toast.error('Please enter both email and password.');
+      return;
+    }
+
+    if (!isValidEmail(email, USER_EMAIL_MAX_LENGTH)) {
+      toast.error('Please enter a valid email address.');
       return;
     }
 
@@ -64,6 +70,7 @@ export default function Login() {
                 <input
                   type="email"
                   required
+                  maxLength={USER_EMAIL_MAX_LENGTH}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"

@@ -1,5 +1,9 @@
 import pool from '../config/db.js';
 import { sendTagOrderEmail, sendDigitalTagEmail } from '../utils/brevoEmailService.js';
+import {
+  isValidEmail,
+  ORDER_EMAIL_MAX_LENGTH
+} from '../utils/emailValidation.js';
 
 // ==========================================
 // USER CONTROLLERS
@@ -35,6 +39,14 @@ export async function createOrder(req, res) {
 
     const chosenDeliveryType = deliveryType === 'physical_shipping' ? 'physical_shipping' : 'digital_email';
     const emailToUse = (targetEmail || req.user.email || '').trim();
+
+    // Whitelist-format check: this address is later used to send the digital
+    // tag kit, so reject any payload that is not a clean, storeable email.
+    if (emailToUse && !isValidEmail(emailToUse, ORDER_EMAIL_MAX_LENGTH)) {
+      return res.status(400).json({
+        message: 'Please provide a valid email address for QR delivery.'
+      });
+    }
 
     // Cash on Delivery is only offered for physical tag shipments
     const isCashOnDelivery = chosenDeliveryType === 'physical_shipping' && paymentMethod === 'cod';

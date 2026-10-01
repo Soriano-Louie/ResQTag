@@ -26,6 +26,7 @@ import { tagOrderService } from '../../services/tagOrderService';
 import { profileService } from '../../services/profileService';
 import { useToast } from '../../context/ToastContext';
 import ModalOverlay from '../common/ModalOverlay';
+import { isValidEmail, ORDER_EMAIL_MAX_LENGTH } from '../../utils/validation';
 
 export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess }) {
   const toast = useToast();
@@ -224,8 +225,13 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
     if (!formData.contactNumber.trim()) {
       return toast.error('Please enter a valid contact phone number.');
     }
-    if (formData.deliveryType === 'digital_email' && !formData.targetEmail.trim()) {
-      return toast.error('Please enter the email address for QR delivery.');
+    if (formData.deliveryType === 'digital_email') {
+      if (!formData.targetEmail.trim()) {
+        return toast.error('Please enter the email address for QR delivery.');
+      }
+      if (!isValidEmail(formData.targetEmail, ORDER_EMAIL_MAX_LENGTH)) {
+        return toast.error('Please enter a valid email address for QR delivery.');
+      }
     }
     if (formData.deliveryType === 'physical_shipping' && !formData.shippingAddress.trim()) {
       return toast.error('Please enter the complete delivery address.');
@@ -816,6 +822,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 <input
                   type="email"
                   name="targetEmail"
+                  maxLength={ORDER_EMAIL_MAX_LENGTH}
                   value={formData.targetEmail}
                   onChange={handleChange}
                   placeholder="e.g. juan@example.com"

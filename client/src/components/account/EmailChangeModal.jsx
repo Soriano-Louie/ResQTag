@@ -5,6 +5,7 @@ import {
   Mail, KeyRound, ShieldCheck, CheckCircle2, AlertTriangle,
   X, Loader2, ArrowRight, ArrowLeft
 } from 'lucide-react';
+import { isValidEmail, USER_EMAIL_MAX_LENGTH } from '../../utils/validation';
 
 /**
  * Two-step email change handshake.
@@ -60,6 +61,10 @@ export default function EmailChangeModal({ isOpen, onClose, currentEmail, onEmai
     }
     if (!newEmail.trim()) {
       setError('Please enter your new email address.');
+      return;
+    }
+    if (!isValidEmail(newEmail, USER_EMAIL_MAX_LENGTH)) {
+      setError('Please enter a valid email address.');
       return;
     }
 
@@ -165,6 +170,7 @@ export default function EmailChangeModal({ isOpen, onClose, currentEmail, onEmai
               <input
                 type="email"
                 required
+                maxLength={USER_EMAIL_MAX_LENGTH}
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
                 placeholder="you@example.com"

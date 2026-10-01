@@ -3,6 +3,7 @@ import { X, User, Phone, Mail, HeartHandshake, Globe, Lock } from 'lucide-react'
 import { contactService } from '../../services/contactService';
 import { useToast } from '../../context/ToastContext';
 import ModalOverlay from '../common/ModalOverlay';
+import { isValidEmail, CONTACT_EMAIL_MAX_LENGTH } from '../../utils/validation';
 
 const RELATIONSHIPS = [
   'Parent',
@@ -52,13 +53,19 @@ export default function ContactModal({ isOpen, onClose, contact, onSaved }) {
       return;
     }
 
+    const trimmedEmail = email.trim();
+    if (trimmedEmail && !isValidEmail(trimmedEmail, CONTACT_EMAIL_MAX_LENGTH)) {
+      toast.error('Please enter a valid email address for this contact.');
+      return;
+    }
+
     try {
       setLoading(true);
       const payload = {
         name: name.trim(),
         relationship,
         contactNumber: contactNumber.trim(),
-        email: email.trim() || null,
+        email: trimmedEmail || null,
         isPublic
       };
 
@@ -163,6 +170,7 @@ export default function ContactModal({ isOpen, onClose, contact, onSaved }) {
               <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
               <input
                 type="email"
+                maxLength={CONTACT_EMAIL_MAX_LENGTH}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="maria@example.com"

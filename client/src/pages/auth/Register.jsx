@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { ShieldAlert, User, Mail, Lock, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { isValidEmail, USER_EMAIL_MAX_LENGTH } from '../../utils/validation';
 
 export default function Register() {
   const { register } = useAuth();
@@ -31,6 +32,11 @@ export default function Register() {
 
     if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim() || !formData.password) {
       toast.error('Please fill in all required fields.');
+      return;
+    }
+
+    if (!isValidEmail(formData.email, USER_EMAIL_MAX_LENGTH)) {
+      toast.error('Please enter a valid email address.');
       return;
     }
 
@@ -134,6 +140,7 @@ export default function Register() {
                   type="email"
                   name="email"
                   required
+                  maxLength={USER_EMAIL_MAX_LENGTH}
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="juan@example.com"

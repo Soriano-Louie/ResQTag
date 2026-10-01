@@ -1,4 +1,8 @@
 import pool from '../config/db.js';
+import {
+  isValidEmail,
+  CONTACT_EMAIL_MAX_LENGTH
+} from '../utils/emailValidation.js';
 
 export async function getContacts(req, res) {
   try {
@@ -28,6 +32,12 @@ export async function createContact(req, res) {
       return res.status(400).json({ message: 'Contact name, relationship, and phone number are required.' });
     }
 
+    const cleanEmail = email && typeof email === 'string' ? email.trim() : null;
+
+    if (cleanEmail && !isValidEmail(cleanEmail, CONTACT_EMAIL_MAX_LENGTH)) {
+      return res.status(400).json({ message: 'Please provide a valid email address for this contact.' });
+    }
+
     const [result] = await pool.query(
       `INSERT INTO emergency_contacts (user_id, name, relationship, contact_number, email, is_public) 
        VALUES (?, ?, ?, ?, ?, ?)`,
@@ -36,7 +46,7 @@ export async function createContact(req, res) {
         name.trim(),
         relationship.trim(),
         contactNumber.trim(),
-        email ? email.trim() : null,
+        cleanEmail,
         isPublic === false ? 0 : 1
       ]
     );
@@ -61,6 +71,12 @@ export async function updateContact(req, res) {
       return res.status(400).json({ message: 'Contact name, relationship, and phone number are required.' });
     }
 
+    const cleanEmail = email && typeof email === 'string' ? email.trim() : null;
+
+    if (cleanEmail && !isValidEmail(cleanEmail, CONTACT_EMAIL_MAX_LENGTH)) {
+      return res.status(400).json({ message: 'Please provide a valid email address for this contact.' });
+    }
+
     const [result] = await pool.query(
       `UPDATE emergency_contacts 
        SET name = ?, relationship = ?, contact_number = ?, email = ?, is_public = ? 
@@ -69,7 +85,7 @@ export async function updateContact(req, res) {
         name.trim(),
         relationship.trim(),
         contactNumber.trim(),
-        email ? email.trim() : null,
+        cleanEmail,
         isPublic === false ? 0 : 1,
         id,
         userId
