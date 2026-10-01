@@ -512,7 +512,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'square_fob_30x30' }))}
+                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'square_fob_30x30', customWidthCm: '', customHeightCm: '' }))}
                     className={`p-2.5 rounded-xl border text-left transition-all ${
                       formData.selectedSize === 'square_fob_30x30'
                         ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
@@ -528,7 +528,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
 
                   <button
                     type="button"
-                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'standard_keychain_30x50' }))}
+                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'standard_keychain_30x50', customWidthCm: '', customHeightCm: '' }))}
                     className={`p-2.5 rounded-xl border text-left transition-all ${
                       formData.selectedSize === 'standard_keychain_30x50'
                         ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
@@ -544,7 +544,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
 
                   <button
                     type="button"
-                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'mini_compact_25x40' }))}
+                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'mini_compact_25x40', customWidthCm: '', customHeightCm: '' }))}
                     className={`p-2.5 rounded-xl border text-left transition-all ${
                       formData.selectedSize === 'mini_compact_25x40'
                         ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
@@ -581,7 +581,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'standard_cr80_card' }))}
+                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'standard_cr80_card', customWidthCm: '', customHeightCm: '' }))}
                     className={`p-2.5 rounded-xl border text-left transition-all ${
                       formData.selectedSize === 'standard_cr80_card'
                         ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
@@ -597,7 +597,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
 
                   <button
                     type="button"
-                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'compact_card_70x45' }))}
+                    onClick={() => setFormData(p => ({ ...p, selectedSize: 'compact_card_70x45', customWidthCm: '', customHeightCm: '' }))}
                     className={`p-2.5 rounded-xl border text-left transition-all ${
                       formData.selectedSize === 'compact_card_70x45'
                         ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'

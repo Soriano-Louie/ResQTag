@@ -128,8 +128,13 @@ export default function QRPage() {
     if (order.selected_size === 'custom') {
       return order.custom_dimensions ? `Custom (${order.custom_dimensions})` : 'Custom Size';
     }
+    // Bundle with custom sub-sizes stores details in custom_dimensions
+    if (order.selected_size === 'complete_bundle_all_sizes' && order.custom_dimensions) {
+      return `Complete Kit — ${order.custom_dimensions}`;
+    }
     const map = {
       standard: 'Standard Size',
+      square_fob_30x30: 'Square Keychain Fob (3×3 cm)',
       standard_keychain_30x50: 'Standard Keychain (3×5 cm)',
       square_fob_35x35: 'Square Fob (3.5×3.5 cm)',
       mini_compact_25x40: 'Mini Compact (2.5×4 cm)',
