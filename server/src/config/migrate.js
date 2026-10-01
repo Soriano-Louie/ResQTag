@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
  * surfacing later as a runtime 500 on one unlucky endpoint.
  */
 const REQUIRED_TABLES = [
+  'family_members', 'tag_order_recipients',
   'users',
   'emergency_profiles',
   'emergency_contacts',
@@ -255,6 +256,31 @@ export async function runMigrations() {
         console.log('👤 Created default admin account: admin@resqtag.com / Admin@123456');
       }
     });
+
+    await step('family schema', () => connection.query(`CREATE TABLE IF NOT EXISTS family_members (
+ member_id INT AUTO_INCREMENT PRIMARY KEY,
+ user_id INT NOT NULL,
+ first_name VARCHAR(50) NOT NULL, last_name VARCHAR(50) NOT NULL,
+ relationship VARCHAR(50) NOT NULL DEFAULT '',
+ profile JSON NOT NULL, contacts JSON NOT NULL, privacy JSON NOT NULL,
+ qr_token VARCHAR(64) NOT NULL UNIQUE, archived BOOLEAN NOT NULL DEFAULT 0,
+ FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB`));
+    await step('family schema', () => connection.query(`CREATE TABLE IF NOT EXISTS tag_order_recipients (
+ recipient_id INT AUTO_INCREMENT PRIMARY KEY,
+ order_id INT NOT NULL, member_id INT NULL,
+ first_name VARCHAR(50) NOT NULL, last_name VARCHAR(50) NOT NULL,
+ qr_token VARCHAR(64) NOT NULL, copies INT NOT NULL,
+ FOREIGN KEY (order_id) REFERENCES tag_orders(order_id) ON DELETE CASCADE,
+ FOREIGN KEY (member_id) REFERENCES family_members(member_id),
+ UNIQUE KEY unique_order_token (order_id, qr_token)
+) ENGINE=InnoDB`));
+    for (const [name, definition] of [['bundle_quantity','INT NULL'], ['package_size','INT NULL'], ['total_peso','INT NULL']]) {
+      await step(`order ${name}`, async () => {
+        const [columns] = await connection.query('SHOW COLUMNS FROM tag_orders LIKE ?', [name]);
+        if (!columns.length) await connection.query(`ALTER TABLE tag_orders ADD COLUMN ${name} ${definition}`);
+      });
+    }
 
     // ---- Verification -------------------------------------------------------
     // Proves the statements above actually took effect. Without this, a skipped

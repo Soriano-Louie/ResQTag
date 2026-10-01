@@ -26,6 +26,8 @@ import { tagOrderService } from '../../services/tagOrderService';
 import { profileService } from '../../services/profileService';
 import { useToast } from '../../context/ToastContext';
 import ModalOverlay from '../common/ModalOverlay';
+import api from '../../services/api';
+import { Link } from 'react-router-dom';
 import { isValidEmail, ORDER_EMAIL_MAX_LENGTH } from '../../utils/validation';
 
 // Physical tag packages — each unit ALWAYS includes BOTH the fixed-size square
@@ -44,6 +46,18 @@ const getPhysicalPackage = (key) => PHYSICAL_PACKAGES.find((p) => p.key === key)
 export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess }) {
   const toast = useToast();
   const fileInputRef = useRef(null);
+  const [members, setMembers] = useState([]);
+  const [memberIds, setMemberIds] = useState([]);
+  const [includeSelf, setIncludeSelf] = useState(false);
+  const [familyError, setFamilyError] = useState('');
+  useEffect(() => {
+    if (!isOpen) return;
+    setFamilyError('');
+    api.get('/family').then(({ data }) => {
+      setMembers(data.members);
+      setMemberIds(ids => ids.filter(id => data.members.some(m => m.member_id === id)));
+    }).catch(err => setFamilyError(err.message));
+  }, [isOpen]);
 
   const [loading, setLoading] = useState(false);
   const [fetchingProfile, setFetchingProfile] = useState(false);
@@ -278,6 +292,9 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isPhysicalDelivery && memberIds.length + Number(includeSelf) !== selectedPhysicalPackage?.sets) {
+      return toast.error(`Select exactly ${selectedPhysicalPackage?.sets} people for this package.`);
+    }
 
     if (!formData.recipientName.trim()) {
       return toast.error('Please enter the recipient full name.');
@@ -346,6 +363,11 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
         submissionData.append('customDimensions', `Keychain: ${kSize} | Card: ${cSize}`);
       }
       submissionData.append('quantity', isPhysicalDelivery ? physicalTotalSets : formData.quantity);
+      if (isPhysicalDelivery) {
+        submissionData.append('bundleQuantity', formData.physicalQty);
+        submissionData.append('memberIds', JSON.stringify(memberIds));
+        submissionData.append('includeSelf', String(includeSelf));
+      }
       if (formData.paymentMethod === 'gcash') {
         submissionData.append('gcashRefNumber', formData.gcashRefNumber.trim());
       }
@@ -619,13 +641,23 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 Every physical package is manufactured at fixed standard sizes — <strong>Square Keychain (3.0 × 3.0 cm)</strong> + <strong>Wallet Card (CR80: 8.56 × 5.4 cm)</strong>. No other sizes are offered for physical tags.
               </p>
 
-              {/* Bundle quantity stepper (family bundles only) */}
-              {selectedPhysicalPackage && selectedPhysicalPackage.sets > 1 && (
+              <fieldset className="p-4 border rounded-xl space-y-3">
+                <legend className="font-bold">Choose people for this package</legend>
+                <p role="status">{memberIds.length + Number(includeSelf)} of {selectedPhysicalPackage?.sets} people selected</p>
+                {familyError && <p role="alert" className="text-rose-700">{familyError} Close and reopen to retry.</p>}
+                <label className="block"><input type="checkbox" checked={includeSelf} onChange={e => setIncludeSelf(e.target.checked)} /> Include my own tag (one slot)</label>
+                {members.map(m => <label className="block" key={m.member_id}><input type="checkbox" checked={memberIds.includes(m.member_id)} onChange={e => setMemberIds(ids => e.target.checked ? [...ids, m.member_id] : ids.filter(id => id !== m.member_id))} /> {m.first_name} {m.last_name}</label>)}
+                <Link to="/family" onClick={onClose} className="text-brand-700 underline">Add or edit family members</Link>
+                <p>{physicalBundleQty} set(s) per selected person. Each set includes one keychain and one wallet card.</p>
+                <p className="font-semibold">{[...(includeSelf ? ['My own tag'] : []), ...members.filter(m => memberIds.includes(m.member_id)).map(m => `${m.first_name} ${m.last_name}`)].join(', ') || 'Choose your recipients above.'}</p>
+              </fieldset>
+              {/* Bundle quantity stepper */}
+              {selectedPhysicalPackage && selectedPhysicalPackage.sets >= 1 && (
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <span className="font-bold text-slate-800 block text-xs">Bundle Quantity</span>
                     <span className="text-[10px] text-slate-500 block">
-                      Order multiple {selectedPhysicalPackage.label} bundles — each adds {selectedPhysicalPackage.sets} tag sets
+                      Each bundle adds one set for every selected person
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -1306,7 +1338,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (isPhysicalDelivery && memberIds.length + Number(includeSelf) !== selectedPhysicalPackage?.sets)}
               className="flex items-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-black rounded-xl shadow-lg shadow-brand-600/30 transition-all disabled:opacity-50"
             >
               {loading ? (

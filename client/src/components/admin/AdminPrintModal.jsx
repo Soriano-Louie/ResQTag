@@ -26,16 +26,16 @@ export default function AdminPrintModal({ orderId, orderIds, onClose, onStatusUp
 
         setOrdersData(results.map((r) => r.order));
 
-        const parsedItems = results.map((res) => ({
-          qr: { qr_token: res.order.qr_token, status: res.order.qr_status },
-          user: { firstName: res.order.first_name, lastName: res.order.last_name },
+        const parsedItems = results.flatMap((res) => (res.order.recipients?.length ? res.order.recipients : [null]).map(person => ({
+          qr: { qr_token: person?.qr_token || res.order.qr_token, status: res.order.qr_status },
+          user: { firstName: person?.first_name || res.order.first_name, lastName: person?.last_name || res.order.last_name },
           tagType: res.order.tag_type || 'bundle',
           selectedSize: res.order.selected_size,
           customDimensions: res.order.custom_dimensions,
-          quantity: res.order.quantity || 1,
+          quantity: person?.copies || res.order.quantity || 1,
           orderId: res.order.order_id,
           order: res.order,
-        }));
+        })));
 
         setItems(parsedItems);
       } catch (err) {
@@ -234,7 +234,7 @@ export default function AdminPrintModal({ orderId, orderIds, onClose, onStatusUp
                       <span className="text-[10px] font-mono text-rose-400 font-bold block uppercase tracking-widest">
                         TAG TOKEN ENCODING
                       </span>
-                      <span className="font-mono text-xs text-slate-200">{ordersData[0]?.qr_token}</span>
+                      <span className="font-mono text-xs text-slate-200">{ordersData[0]?.recipients?.length ? ordersData[0].recipients.map(p => `${p.first_name} ${p.last_name}: ${p.copies} set(s)`).join(' · ') : ordersData[0]?.qr_token}</span>
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] uppercase text-slate-400 block">Quantity</span>

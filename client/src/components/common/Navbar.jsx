@@ -75,6 +75,7 @@ export default function Navbar() {
                   <LayoutDashboard className="w-4 h-4 text-brand-400" />
                   Dashboard
                 </Link>
+                <Link to="/family" className="text-white px-3 py-2">Family members</Link>
 
                 <Link
                   to="/qr"
@@ -184,6 +185,7 @@ export default function Navbar() {
                 <LayoutDashboard className="w-5 h-5 text-brand-400" />
                 Dashboard
               </Link>
+              <Link to="/family" onClick={() => setMobileMenuOpen(false)} className="text-white block px-4 py-3">Family members</Link>
               <Link
                 to="/qr"
                 onClick={() => setMobileMenuOpen(false)}

@@ -1,4 +1,6 @@
 import pool from '../config/db.js';
+import { validateBundle } from '../utils/familyValidation.js';
+import { attachRecipients } from '../utils/orderRecipients.js';
 import { sendTagOrderEmail, sendDigitalTagEmail } from '../utils/brevoEmailService.js';
 import {
   isValidEmail,
@@ -9,12 +11,12 @@ import {
 // PHYSICAL TAG PACKAGES
 // ==========================================
 // Every physical order is a fixed combo package that ALWAYS includes BOTH the
-// square keychain (code 'square_fob_30x30', 3.0 × 3.0 cm) and the standard
-// CR80 wallet card (code 'standard_cr80_card', 8.56 × 5.4 cm) — no other sizes
+// square keychain (code 'square_fob_30x30', 3.0 Ã— 3.0 cm) and the standard
+// CR80 wallet card (code 'standard_cr80_card', 8.56 Ã— 5.4 cm) â€” no other sizes
 // are offered for physical tags. `sets` is how many keychain+card pairs one
 // purchase unit contains and `pricePeso` is that unit's price. `quantity` on an
-// order is the TOTAL number of tag sets (= package.sets × bundle multiplier),
-// so a Family of 5 × 2 stores quantity = 10.
+// order is the TOTAL number of tag sets (= package.sets Ã— bundle multiplier),
+// so a Family of 5 Ã— 2 stores quantity = 10.
 const PHYSICAL_PACKAGES = {
   physical_combo: { label: 'Single Combo', pricePeso: 100, sets: 1 },
   physical_family_3: { label: 'Family of 3', pricePeso: 210, sets: 3 },
@@ -30,6 +32,7 @@ const PHYSICAL_PACKAGES = {
  * User submits a new physical tag print or digital email QR request
  */
 export async function createOrder(req, res) {
+  let connection;
   try {
     const userId = req.user.user_id;
     const {
@@ -107,7 +110,13 @@ export async function createOrder(req, res) {
       ? 'bundle' // Combo: keychain + wallet card are always both included
       : (validTagTypes.includes(tagType) ? tagType : 'keychain');
 
-    const qty = parseInt(quantity, 10) || 1;
+    let selection = null;
+    if (physicalPackage) {
+      try { selection = validateBundle(req.body, physicalPackage.sets); }
+      catch (err) { return res.status(400).json({ message: err.message }); }
+    }
+    const qty = selection ? selection.quantity * physicalPackage.sets : Number(quantity);
+    if (!Number.isSafeInteger(qty)) return res.status(400).json({ message: 'Quantity must be a whole number.' });
     if (qty < 1 || qty > 20) {
       return res.status(400).json({ message: 'Quantity must be between 1 and 20.' });
     }
@@ -142,16 +151,18 @@ export async function createOrder(req, res) {
     }
 
 
-    // Verify user has an active QR tag
-    const [qrRows] = await pool.query(
-      'SELECT qr_id, qr_token, status FROM qr_tags WHERE user_id = ?',
-      [userId]
-    );
-
-    if (qrRows.length === 0) {
-      return res.status(400).json({
-        message: 'No QR Tag registered for this account. Please refresh your dashboard.'
-      });
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+    const recipients = [];
+    if (!selection || selection.includeSelf) {
+      const [owners] = await connection.query(`SELECT u.first_name, u.last_name, q.qr_token FROM users u JOIN qr_tags q ON q.user_id=u.user_id WHERE u.user_id=? AND q.status='active' FOR UPDATE`, [userId]);
+      if (!owners.length) throw Object.assign(new Error('Your own QR tag must be active.'), { status: 400 });
+      if (selection) recipients.push({ ...owners[0], member_id: null });
+    }
+    if (selection?.members.length) {
+      const [members] = await connection.query(`SELECT member_id, first_name, last_name, qr_token FROM family_members WHERE user_id=? AND archived=0 AND member_id IN (${selection.members.map(() => '?').join(',')}) ORDER BY member_id FOR UPDATE`, [userId, ...selection.members]);
+      if (members.length !== selection.members.length) throw Object.assign(new Error('Some selected members are unavailable. Refresh your selection.'), { status: 400 });
+      recipients.push(...members);
     }
 
     const cleanRef = chosenPaymentMethod === 'gcash' && gcashRefNumber ? gcashRefNumber.trim() : null;
@@ -159,7 +170,7 @@ export async function createOrder(req, res) {
     const cleanCustomDims = customDimensions ? customDimensions.trim() : null;
     const initialPaymentStatus = isCashOnDelivery ? 'unpaid' : 'submitted';
 
-    const [insertRes] = await pool.query(
+    const [insertRes] = await connection.query(
       `INSERT INTO tag_orders (
         user_id, delivery_type, payment_method, target_email, recipient_name, contact_number, 
         shipping_address, tag_type, selected_size, custom_dimensions, quantity, 
@@ -184,12 +195,17 @@ export async function createOrder(req, res) {
       ]
     );
 
+    if (selection) {
+      await connection.query('UPDATE tag_orders SET bundle_quantity=?, package_size=?, total_peso=? WHERE order_id=?', [selection.quantity, physicalPackage.sets, physicalTotalPeso, insertRes.insertId]);
+      for (const person of recipients) await connection.query('INSERT INTO tag_order_recipients (order_id, member_id, first_name, last_name, qr_token, copies) VALUES (?,?,?,?,?,?)', [insertRes.insertId, person.member_id, person.first_name, person.last_name, person.qr_token, selection.quantity]);
+    }
+    await connection.commit();
     return res.status(201).json({
       message: chosenDeliveryType === 'digital_email'
         ? 'Digital ResQTag delivery request submitted! Our team will verify your GCash receipt and dispatch your QR templates via email.'
         : isCashOnDelivery
-          ? `Physical ResQTag order placed with Cash on Delivery! ${physicalPackage.label} · ${qty} tag set${qty === 1 ? '' : 's'} · ₱${physicalTotalPeso}. Please prepare the exact amount for our courier on the delivery date.`
-          : `Physical ResQTag order (${physicalPackage.label} · ${qty} tag set${qty === 1 ? '' : 's'} · ₱${physicalTotalPeso}) placed successfully! Our team will verify your payment and start production.`,
+          ? `Physical ResQTag order placed with Cash on Delivery! ${physicalPackage.label} Â· ${qty} tag set${qty === 1 ? '' : 's'} Â· â‚±${physicalTotalPeso}. Please prepare the exact amount for our courier on the delivery date.`
+          : `Physical ResQTag order (${physicalPackage.label} Â· ${qty} tag set${qty === 1 ? '' : 's'} Â· â‚±${physicalTotalPeso}) placed successfully! Our team will verify your payment and start production.`,
       orderId: insertRes.insertId,
       deliveryType: chosenDeliveryType,
       paymentMethod: chosenPaymentMethod,
@@ -202,9 +218,10 @@ export async function createOrder(req, res) {
       paymentStatus: initialPaymentStatus
     });
   } catch (error) {
+    if (connection) await connection.rollback();
     console.error('createOrder error:', error);
-    return res.status(500).json({ message: 'Failed to submit tag order request.', error: error.message });
-  }
+    return res.status(error.status || 500).json({ message: error.status ? error.message : 'Failed to submit tag order request.' });
+  } finally { connection?.release(); }
 }
 
 /**
@@ -216,7 +233,7 @@ export async function getMyOrders(req, res) {
 
     const [orders] = await pool.query(
       `SELECT 
-         order_id, delivery_type, payment_method, target_email, recipient_name, contact_number, 
+         bundle_quantity, package_size, total_peso, order_id, delivery_type, payment_method, target_email, recipient_name, contact_number,
          shipping_address, tag_type, selected_size, custom_dimensions, quantity, 
          order_status, payment_status, gcash_receipt_url, gcash_ref_number, 
          admin_rejection_reason, notes, created_at, updated_at
@@ -226,6 +243,7 @@ export async function getMyOrders(req, res) {
       [userId]
     );
 
+    await attachRecipients(pool, orders);
     return res.json({ orders: orders || [] });
   } catch (error) {
     console.error('getMyOrders error:', error);
@@ -434,7 +452,7 @@ export async function getAdminOrders(req, res) {
     // Data query
     const [orders] = await pool.query(
       `SELECT 
-         o.order_id, 
+         o.bundle_quantity, o.package_size, o.total_peso, o.order_id,
          o.user_id, 
          o.delivery_type,
          o.payment_method,
@@ -468,6 +486,7 @@ export async function getAdminOrders(req, res) {
       [...queryParams, limitNum, offset]
     );
 
+    await attachRecipients(pool, orders);
     // Order counts by status & payment for metrics
     const [statusCounts] = await pool.query(`
       SELECT 
@@ -530,7 +549,11 @@ export async function confirmPaymentAndSendEmail(req, res) {
 
     const order = rows[0];
 
-    if (!order.qr_token) {
+    await attachRecipients(pool, [order]);
+    if (order.package_size && order.recipients.length !== order.package_size) {
+      return res.status(409).json({ message: 'Order recipient information is incomplete. Resolve the order before fulfillment.' });
+    }
+    if (!order.qr_token && !order.recipients.length) {
       return res.status(400).json({ message: 'User does not have an active QR token generated.' });
     }
 
@@ -541,6 +564,9 @@ export async function confirmPaymentAndSendEmail(req, res) {
     let emailResult = null;
     try {
       emailResult = await sendTagOrderEmail({
+        recipients: order.recipients,
+        bundleQuantity: order.bundle_quantity,
+        totalPeso: order.total_peso,
         recipientEmail: destinationEmail,
         recipientName,
         qrToken: order.qr_token,
@@ -763,7 +789,7 @@ export async function getOrderPrintData(req, res) {
 
     const [orderRows] = await pool.query(
       `SELECT 
-         o.order_id, 
+         o.bundle_quantity, o.package_size, o.total_peso, o.order_id,
          o.delivery_type,
          o.payment_method,
          o.target_email,
@@ -799,6 +825,17 @@ export async function getOrderPrintData(req, res) {
 
     const order = orderRows[0];
 
+    await attachRecipients(pool, [order]);
+    if (order.package_size && order.recipients.length !== order.package_size) {
+      return res.status(409).json({ message: 'Order recipient information is incomplete. Resolve the order before printing.' });
+    }
+    // Do not replace an archived member or regenerated owner token with another person's tag.
+    for (const person of order.recipients) {
+      const [active] = person.member_id
+        ? await pool.query('SELECT member_id FROM family_members WHERE member_id=? AND user_id=? AND archived=0 AND qr_token=?', [person.member_id, order.user_id, person.qr_token])
+        : await pool.query("SELECT qr_id FROM qr_tags WHERE user_id=? AND qr_token=? AND status='active'", [order.user_id, person.qr_token]);
+      if (!active.length) return res.status(409).json({ message: 'An ordered tag is inactive or replaced. Resolve the order before printing.' });
+    }
     // Fetch basic emergency summary for print verification
     const [profileRows] = await pool.query(
       'SELECT blood_type, allergies, emergency_notes FROM emergency_profiles WHERE user_id = ?',

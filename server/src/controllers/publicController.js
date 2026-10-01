@@ -9,6 +9,15 @@ export async function getPublicEmergencyProfile(req, res) {
       return res.status(400).json({ message: 'Invalid ResQTag emergency token format.' });
     }
 
+    if (token.startsWith('fm_')) {
+      const [rows] = await pool.query(`SELECT m.*, u.account_status FROM family_members m JOIN users u ON u.user_id=m.user_id WHERE m.qr_token=?`, [token]);
+      if (!rows.length) return res.status(404).json({ status: 'not_found', message: 'Family tag not found.' });
+      const m = rows[0];
+      if (m.archived || m.account_status !== 'active') return res.json({ status: 'inactive', message: 'This family tag is inactive.' });
+      const decode = v => typeof v === 'string' ? JSON.parse(v) : v;
+      const privacy = Object.fromEntries(Object.keys(DEFAULT_PRIVACY_FIELDS).map(key => [key, decode(m.privacy)?.[key] === true ? 1 : 0]));
+      return res.json({ status: 'active', data: filterPublicEmergencyProfile(m, decode(m.profile), decode(m.contacts), privacy) });
+    }
     // 1. Fetch QR Tag Record
     const [qrRows] = await pool.query(
       'SELECT qr_id, user_id, qr_token, status FROM qr_tags WHERE qr_token = ?',

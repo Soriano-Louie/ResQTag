@@ -1,4 +1,5 @@
 import express from 'express';
+import familyRoutes from './familyRoutes.js';
 import authRoutes from './authRoutes.js';
 import profileRoutes from './profileRoutes.js';
 import contactRoutes from './contactRoutes.js';
@@ -16,6 +17,7 @@ router.get('/health', (req, res) => {
 });
 
 router.use('/auth', authRoutes);
+router.use('/family', familyRoutes);
 router.use('/profile', profileRoutes);
 router.use('/contacts', contactRoutes);
 router.use('/privacy', privacyRoutes);

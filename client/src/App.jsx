@@ -20,6 +20,7 @@ import Register from './pages/auth/Register';
 
 // Authenticated User Pages
 import Dashboard from './pages/user/Dashboard';
+import FamilyPage from './pages/user/FamilyPage';
 import ProfilePage from './pages/user/ProfilePage';
 import MedicalPage from './pages/user/MedicalPage';
 import ContactsPage from './pages/user/ContactsPage';
@@ -51,6 +52,7 @@ export default function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
 
+                <Route path="/family" element={<ProtectedRoute><FamilyPage /></ProtectedRoute>} />
                 {/* User Protected Routes */}
                 <Route
                   path="/dashboard"

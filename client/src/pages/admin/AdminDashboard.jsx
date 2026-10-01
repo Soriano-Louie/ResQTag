@@ -301,6 +301,7 @@ export default function AdminDashboard() {
   };
 
   const formatOrderItemLabel = (order) => {
+    if (order.recipients?.length) return `${order.bundle_quantity} bundle(s) · ${order.quantity} sets · ${order.recipients.map(p => `${p.first_name} ${p.last_name} × ${p.copies}`).join(', ')}`;
     if (order.tag_type === 'keychain') return `${order.quantity}x Keychain`;
     if (order.tag_type === 'wallet_card') return `${order.quantity}x Wallet Card`;
     if (isPhysicalPackageOrder(order)) {

@@ -84,6 +84,9 @@ function formatTagSizeLabel(tagType, selectedSize, customDimensions) {
  * Sends order fulfillment emails (either Physical Shipping update or Digital QR Kit delivery)
  */
 export async function sendTagOrderEmail({
+  recipients = [],
+  bundleQuantity,
+  totalPeso,
   recipientEmail,
   recipientName,
   qrToken,
@@ -97,6 +100,21 @@ export async function sendTagOrderEmail({
   contactNumber = ''
 }) {
   try {
+    if (deliveryType === 'physical_shipping' && recipients.length) {
+      const client = getBrevoClient();
+      if (!client) {
+        if (config.nodeEnv === 'production') throw new Error('Brevo API key is not configured.');
+        return { success: true, simulated: true };
+      }
+      const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      const response = await client.transactionalEmails.sendTransacEmail({
+        subject: `ResQTag order #${orderId} approved`,
+        htmlContent: `<h1>Your family tags are being prepared</h1><p>${escape(bundleQuantity)} bundle(s). Total: PHP ${escape(totalPeso)}.</p><ul>${recipients.map(p => `<li>${escape(p.first_name)} ${escape(p.last_name)}: ${escape(p.copies)} set(s), each with one keychain and one wallet card.</li>`).join('')}</ul><p>${paymentMethod === 'cod' ? 'Payment will be collected on delivery.' : 'Your payment has been verified.'}</p><p>Shipping address: ${escape(shippingAddress)}</p>`,
+        sender: { name: config.brevo.senderName, email: config.brevo.senderEmail },
+        to: [{ email: recipientEmail, name: recipientName }]
+      });
+      return { success: true, simulated: false, messageId: response.messageId };
+    }
     const origin = getPublicOrigin();
     const emergencyUrl = `${origin}/emergency/${qrToken}`;
     const tokenDisplay = `RQ-${qrToken.slice(0, 8).toUpperCase()}`;
