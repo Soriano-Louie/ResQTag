@@ -117,11 +117,6 @@ export default function Login() {
             </Link>
           </div>
         </div>
-
-        {/* Demo Admin Tip */}
-        <div className="bg-slate-100 p-3 rounded-xl border border-slate-200 text-center text-xs text-slate-500">
-          Admin demo login: <code className="font-mono text-slate-700">admin@resqtag.com</code> / <code className="font-mono text-slate-700">Admin@123456</code>
-        </div>
       </div>
     </div>
   );
