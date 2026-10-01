@@ -36,6 +36,31 @@ function getBrevoClient() {
 }
 
 /**
+ * Neutralises client-side "data detectors" (Gmail / iOS / Outlook) that silently
+ * turn user-supplied text into blue clickable links.
+ *
+ * This is not a preference we can switch off — mail clients linkify URLs, phone
+ * numbers and street addresses on receipt. The shipping address field is free text
+ * and users routinely paste a Google Maps URL into it, so it renders as a blue
+ * underlined link pointing at an external map.
+ *
+ * `&zwnj;` (zero-width non-joiner) is invisible in every client but breaks the
+ * character runs the detectors match on. Applied to the string and dot/warning
+ * characters so `google.com`, `https://` and phone numbers are no longer
+ * recognised, while the text stays copy-pasteable.
+ */
+function neutralizeDataDetectors(value = '') {
+  return String(value)
+    // Break the protocol separator so "https://" is not recognised as a URL.
+    // The colon is kept in the output, otherwise the address renders as "https//".
+    .replace(/(https?):(\/\/)/gi, '$1:&zwnj;$2')
+    // Break the TLD dot so "google.com" is not recognised as a hostname
+    .replace(/([a-z0-9])(\.)(?=[a-z]{2,})/gi, '$1&zwnj;$2')
+    // Break phone numbers (7+ digit runs with optional +/dashes/spaces)
+    .replace(/\+?(\d[\d\s\-().]{6,}\d)/g, (match) => match.replace(/(\d)(\d)/, '$1&zwnj;$2'));
+}
+
+/**
  * Format tag size display title
  */
 function formatTagSizeLabel(tagType, selectedSize, customDimensions) {
@@ -150,9 +175,40 @@ export async function sendTagOrderEmail({
     .delivery-guide { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 14px; padding: 18px 20px; margin: 24px 0; }
     .delivery-guide h3 { margin: 0 0 8px; font-size: 14px; color: #166534; font-weight: 800; }
     .delivery-guide ul { margin: 0; padding-left: 18px; font-size: 12px; color: #14532d; line-height: 1.6; }
-    .btn { display: inline-block; width: 100%; box-sizing: border-box; text-align: center; background: #0f172a; color: #ffffff; text-decoration: none; padding: 14px 24px; border-radius: 12px; font-weight: 800; font-size: 14px; margin: 16px 0; }
     .footer { background: #f8fafc; padding: 24px 30px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+
+    /* Neutralize mail-client "data detectors" that auto-link user-supplied text
+       (pasted Google Maps URLs in the shipping address, phone numbers, etc).
+       These selectors target the classes/iOS attributes the clients inject. */
+    a[x-apple-data-detectors],
+    .x-gmail-data-detectors,
+    .x-gmail-data-detectors *,
+    .aBn {
+      color: inherit !important;
+      text-decoration: none !important;
+      border-bottom: 0 !important;
+      cursor: default !important;
+      font-size: inherit !important;
+      font-family: inherit !important;
+      font-weight: inherit !important;
+    }
   </style>
+  <style>
+    /* Gmail-specific: it injects <a> tags without x-apple-data-detectors and
+       rewrites them to <u>, so target the following-sibling and body selectors. */
+    u + .specs-table a {
+      color: inherit !important;
+      text-decoration: none !important;
+      font-size: inherit !important;
+      font-weight: inherit !important;
+    }
+    #MessageViewBody a {
+      color: inherit !important;
+      text-decoration: none !important;
+    }
+  </style>
+  <!-- Tell Apple Mail/iOS not to linkify phone numbers or addresses -->
+  <meta name="format-detection" content="telephone=no,date=no,address=no,email=no,url=no" />
 </head>
 <body>
   <div class="container">
@@ -194,17 +250,14 @@ export async function sendTagOrderEmail({
         ${shippingAddress ? `
         <tr>
           <td class="label">Shipping Address:</td>
-          <td class="value">${shippingAddress}</td>
+          <td class="value">${neutralizeDataDetectors(shippingAddress)}</td>
         </tr>` : ''}
         ${contactNumber ? `
         <tr>
           <td class="label">Contact Phone:</td>
-          <td class="value">${contactNumber}</td>
+          <td class="value">${neutralizeDataDetectors(contactNumber)}</td>
         </tr>` : ''}
-        <tr>
-          <td class="label">Live Profile Link:</td>
-          <td class="value"><a href="${emergencyUrl}" style="color: #0284c7; word-break: break-all;">${emergencyUrl}</a></td>
-        </tr>
+
       </table>
 
       <div class="card-qr">
@@ -227,8 +280,6 @@ export async function sendTagOrderEmail({
                <li><strong>Keep Details Updated:</strong> You can update your emergency contacts and medical information anytime in your dashboard without needing a new physical tag.</li>`}
         </ul>
       </div>
-
-      <a href="${emergencyUrl}" class="btn">View Your Live Emergency Profile</a>
     </div>
 
     <div class="footer">
@@ -269,9 +320,40 @@ export async function sendTagOrderEmail({
     .print-guide { background: #fff1f2; border: 1px solid #fecdd3; border-radius: 14px; padding: 18px 20px; margin: 24px 0; }
     .print-guide h3 { margin: 0 0 8px; font-size: 14px; color: #9f1239; font-weight: 800; }
     .print-guide ul { margin: 0; padding-left: 18px; font-size: 12px; color: #881337; line-height: 1.6; }
-    .btn { display: inline-block; width: 100%; box-sizing: border-box; text-align: center; background: #e11d48; color: #ffffff; text-decoration: none; padding: 14px 24px; border-radius: 12px; font-weight: 800; font-size: 14px; margin: 16px 0; }
     .footer { background: #f8fafc; padding: 24px 30px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+
+    /* Neutralize mail-client "data detectors" that auto-link user-supplied text
+       (pasted Google Maps URLs, phone numbers, etc). These selectors target the
+       classes/iOS attributes the clients inject around detected content. */
+    a[x-apple-data-detectors],
+    .x-gmail-data-detectors,
+    .x-gmail-data-detectors *,
+    .aBn {
+      color: inherit !important;
+      text-decoration: none !important;
+      border-bottom: 0 !important;
+      cursor: default !important;
+      font-size: inherit !important;
+      font-family: inherit !important;
+      font-weight: inherit !important;
+    }
   </style>
+  <style>
+    /* Gmail-specific: it injects <a> tags without x-apple-data-detectors and
+       rewrites them to <u>, so target the following-sibling and body selectors. */
+    u + .specs-table a {
+      color: inherit !important;
+      text-decoration: none !important;
+      font-size: inherit !important;
+      font-weight: inherit !important;
+    }
+    #MessageViewBody a {
+      color: inherit !important;
+      text-decoration: none !important;
+    }
+  </style>
+  <!-- Tell Apple Mail/iOS not to linkify phone numbers or addresses -->
+  <meta name="format-detection" content="telephone=no,date=no,address=no,email=no,url=no" />
 </head>
 <body>
   <div class="container">
@@ -307,10 +389,6 @@ export async function sendTagOrderEmail({
           <td class="label">Emergency Token:</td>
           <td class="value" style="font-family: monospace;">${tokenDisplay}</td>
         </tr>
-        <tr>
-          <td class="label">Live Profile Link:</td>
-          <td class="value"><a href="${emergencyUrl}" style="color: #e11d48; word-break: break-all;">${emergencyUrl}</a></td>
-        </tr>
       </table>
 
       <div class="print-guide">
@@ -322,7 +400,7 @@ export async function sendTagOrderEmail({
         </ul>
       </div>
 
-      <a href="${emergencyUrl}" class="btn">View Your Live Emergency Profile</a>
+
     </div>
 
     <div class="footer">

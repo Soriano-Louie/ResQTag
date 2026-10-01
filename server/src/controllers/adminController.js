@@ -30,9 +30,11 @@ export async function getUsers(req, res) {
     const [users] = await pool.query(
       `SELECT u.user_id, u.first_name, u.middle_name, u.last_name, u.email, u.role, 
               u.account_status, u.created_at, q.qr_token, q.status AS qr_status, 
-              q.scan_count, q.last_scanned_at
+              q.scan_count, q.last_scanned_at,
+              p.contact_number
        FROM users u
        LEFT JOIN qr_tags q ON u.user_id = q.user_id
+       LEFT JOIN emergency_profiles p ON u.user_id = p.user_id
        WHERE u.email LIKE ? OR u.first_name LIKE ? OR u.last_name LIKE ?
        ORDER BY u.created_at DESC
        LIMIT ? OFFSET ?`,
