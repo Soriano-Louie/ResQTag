@@ -3,6 +3,7 @@ import { adminService } from '../../services/adminService';
 import { tagOrderService } from '../../services/tagOrderService';
 import { useToast } from '../../context/ToastContext';
 import AdminPrintModal from '../../components/admin/AdminPrintModal';
+import ModalOverlay from '../../components/common/ModalOverlay';
 import { 
   ShieldCheck, 
   Users, 
@@ -1216,9 +1217,12 @@ export default function AdminDashboard() {
       {/* ========================================================
           GCASH RECEIPT INSPECTION MODAL
           ======================================================== */}
-      {viewingReceiptOrder && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 relative my-8 space-y-4">
+      <ModalOverlay
+        isOpen={Boolean(viewingReceiptOrder)}
+        onClose={() => setViewingReceiptOrder(null)}
+        className="bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4"
+      >
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 relative my-8 space-y-4 max-h-[92dvh] overflow-y-auto overscroll-contain">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
@@ -1317,14 +1321,16 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </ModalOverlay>
 
       {/* ========================================================
           PAYMENT REJECTION REASON MODAL
           ======================================================== */}
-      {rejectingOrder && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <ModalOverlay
+        isOpen={Boolean(rejectingOrder)}
+        onClose={() => setRejectingOrder(null)}
+        className="bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-100">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
@@ -1382,8 +1388,7 @@ export default function AdminDashboard() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </ModalOverlay>
     </div>
   );
 }

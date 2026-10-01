@@ -5,6 +5,7 @@ import { qrService } from '../../services/qrService';
 import { tagOrderService } from '../../services/tagOrderService';
 import QRCard from '../../components/dashboard/QRCard';
 import { useToast } from '../../context/ToastContext';
+import ModalOverlay from '../../components/common/ModalOverlay';
 import { 
   ShieldCheck, 
   ArrowLeft, 
@@ -502,8 +503,11 @@ export default function QRPage() {
       </div>
 
       {/* Resubmit Payment Modal */}
-      {resubmitOrder && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <ModalOverlay
+        isOpen={Boolean(resubmitOrder)}
+        onClose={() => setResubmitOrder(null)}
+        className="bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-100">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
@@ -596,8 +600,7 @@ export default function QRPage() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </ModalOverlay>
     </div>
   );
 }

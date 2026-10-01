@@ -32,7 +32,7 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={toast}>
       {children}
       {/* Toast Overlay */}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full px-4 pointer-events-none no-print">
+      <div className="fixed bottom-4 right-4 z-[200] flex flex-col gap-2 max-w-md w-full px-4 pointer-events-none no-print">
         {toasts.map(t => (
           <div
             key={t.id}

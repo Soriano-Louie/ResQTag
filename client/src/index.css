@@ -8,6 +8,18 @@
   }
 }
 
+/* Modal overlays lock page scroll while open; keep gestures from chaining to the page */
+.modal-overlay {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+/* Respect notched / home-indicator devices when a modal fills the screen */
+.safe-area-inset {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* Custom Print Styles for ResQTag Physical Tag */
 @media print {
   html, body {

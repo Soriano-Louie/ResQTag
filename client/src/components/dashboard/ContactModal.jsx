@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, User, Phone, Mail, HeartHandshake, Globe, Lock } from 'lucide-react';
 import { contactService } from '../../services/contactService';
 import { useToast } from '../../context/ToastContext';
+import ModalOverlay from '../common/ModalOverlay';
 
 const RELATIONSHIPS = [
   'Parent',
@@ -79,8 +80,12 @@ export default function ContactModal({ isOpen, onClose, contact, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-scale-in">
+    <ModalOverlay
+      isOpen={isOpen}
+      onClose={onClose}
+      className="bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4"
+    >
+      <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-scale-in max-h-[90dvh] overflow-y-auto overscroll-contain">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-brand-50 text-brand-600">
@@ -217,6 +222,6 @@ export default function ContactModal({ isOpen, onClose, contact, onSaved }) {
           </div>
         </form>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

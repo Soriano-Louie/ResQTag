@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { authService } from '../../services/authService';
+import ModalOverlay from '../../components/common/ModalOverlay';
 import { User, Lock, Trash2, ArrowLeft, Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 export default function AccountSettings() {
@@ -184,8 +185,11 @@ export default function AccountSettings() {
       </div>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <ModalOverlay
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        className="bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center gap-3 text-rose-600">
               <AlertTriangle className="w-6 h-6" />
@@ -223,8 +227,7 @@ export default function AccountSettings() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </ModalOverlay>
     </div>
   );
 }

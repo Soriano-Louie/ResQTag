@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { contactService } from '../../services/contactService';
 import { useToast } from '../../context/ToastContext';
 import ContactModal from '../../components/dashboard/ContactModal';
+import ModalOverlay from '../../components/common/ModalOverlay';
 import { 
   HeartHandshake, 
   Plus, 
@@ -217,8 +218,11 @@ export default function ContactsPage() {
       />
 
       {/* Delete Confirmation Modal */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <ModalOverlay
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        className="bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
             <h3 className="font-bold text-slate-900 text-lg">Remove Emergency Contact?</h3>
             <p className="text-xs text-slate-600">
@@ -239,8 +243,7 @@ export default function ContactsPage() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </ModalOverlay>
     </div>
   );
 }

@@ -23,6 +23,7 @@ import { tagOrderService } from '../../services/tagOrderService';
 import { useToast } from '../../context/ToastContext';
 import OrderTagModal from './OrderTagModal';
 import PrintableTag from './PrintableTag';
+import ModalOverlay from '../common/ModalOverlay';
 
 export default function QRCard({ qr, user, onQRUpdated }) {
   const toast = useToast();
@@ -413,8 +414,11 @@ export default function QRCard({ qr, user, onQRUpdated }) {
       />
 
       {/* Deactivate/Activate Confirm Modal */}
-      {showStatusConfirm && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <ModalOverlay
+        isOpen={showStatusConfirm}
+        onClose={() => setShowStatusConfirm(false)}
+        className="bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center gap-3">
               <div className={`p-2.5 rounded-2xl ${isActive ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
@@ -447,12 +451,14 @@ export default function QRCard({ qr, user, onQRUpdated }) {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </ModalOverlay>
 
       {/* Regenerate Confirm Modal */}
-      {showRegenerateConfirm && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <ModalOverlay
+        isOpen={showRegenerateConfirm}
+        onClose={() => setShowRegenerateConfirm(false)}
+        className="bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-2xl bg-amber-100 text-amber-600">
@@ -479,8 +485,7 @@ export default function QRCard({ qr, user, onQRUpdated }) {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </ModalOverlay>
     </>
   );
 }

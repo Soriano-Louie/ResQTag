@@ -25,6 +25,7 @@ import {
 import { tagOrderService } from '../../services/tagOrderService';
 import { profileService } from '../../services/profileService';
 import { useToast } from '../../context/ToastContext';
+import ModalOverlay from '../common/ModalOverlay';
 
 export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess }) {
   const toast = useToast();
@@ -294,8 +295,12 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-7 shadow-2xl border border-slate-100 relative my-6 max-h-[92vh] flex flex-col">
+    <ModalOverlay
+      isOpen={isOpen}
+      onClose={onClose}
+      className="bg-slate-950/80 backdrop-blur-md flex items-start sm:items-center justify-center p-0 sm:p-4"
+    >
+      <div className="safe-area-inset bg-white sm:rounded-3xl rounded-none max-w-xl w-full sm:p-7 p-4 shadow-2xl border border-slate-100 relative sm:my-6 my-0 sm:max-h-[92dvh] max-h-[100dvh] h-[100dvh] sm:h-auto flex flex-col">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -319,7 +324,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="mt-4 space-y-5 overflow-y-auto pr-1 text-xs flex-1">
+        <form onSubmit={handleSubmit} className="mt-4 space-y-5 overflow-y-auto overscroll-contain pr-1 text-xs flex-1 min-h-0">
           {/* 1. Delivery Option Selection */}
           <div className="space-y-2">
             <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
@@ -1117,8 +1122,8 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
             </p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 shrink-0">
+          {/* Action Buttons — pinned so they stay reachable while the form scrolls */}
+          <div className="sticky bottom-0 -mb-4 sm:-mb-7 -mx-1 px-1 pb-4 sm:pb-7 pt-3 bg-white flex justify-end gap-3 border-t border-slate-100 z-10">
             <button
               type="button"
               onClick={onClose}
@@ -1146,6 +1151,6 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
           </div>
         </form>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }
