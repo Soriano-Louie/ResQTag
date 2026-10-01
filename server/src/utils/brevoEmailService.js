@@ -1,6 +1,28 @@
 import { BrevoClient } from '@getbrevo/brevo';
 import QRCode from 'qrcode';
 import { config } from '../config/env.js';
+import { uploadImageBuffer } from './cloudinaryStorage.js';
+
+/**
+ * Resolves the public frontend origin used for QR / profile links in emails.
+ *
+ * Falls back to localhost only in development. In production a missing CLIENT_URL
+ * would silently ship dead localhost links to real customers, so it is logged loudly.
+ */
+function getPublicOrigin() {
+  const configured = (config.clientUrl || '').trim().replace(/\/+$/, '');
+
+  if (configured) return configured;
+
+  if (config.nodeEnv === 'production') {
+    console.error(
+      'CLIENT_URL is not set. Emails will contain broken localhost links. ' +
+      'Set CLIENT_URL to your deployed frontend origin (e.g. https://resqtag.vercel.app).'
+    );
+  }
+
+  return 'http://localhost:5173';
+}
 
 /**
  * Initializes Brevo Transactional Email API client
@@ -50,7 +72,7 @@ export async function sendTagOrderEmail({
   contactNumber = ''
 }) {
   try {
-    const origin = config.clientUrl || 'http://localhost:5173';
+    const origin = getPublicOrigin();
     const emergencyUrl = `${origin}/emergency/${qrToken}`;
     const tokenDisplay = `RQ-${qrToken.slice(0, 8).toUpperCase()}`;
     const sizeLabel = formatTagSizeLabel(tagType, selectedSize, customDimensions);
@@ -79,7 +101,18 @@ export async function sendTagOrderEmail({
     });
 
     const qrBase64 = qrBuffer.toString('base64');
-    const qrDataUri = `data:image/png;base64,${qrBase64}`;
+
+    // Gmail, Outlook and most other clients strip `data:` URIs from HTML email by
+    // default, which renders the QR as a broken-image placeholder. Host the PNG on
+    // Cloudinary and reference it over https so it displays in every client.
+    const hostedQrUrl = await uploadImageBuffer(qrBuffer, {
+      folder: 'resqtag/qr-codes',
+      filename: `qr-${tokenDisplay}`
+    });
+    const qrImageSrc = hostedQrUrl || `data:image/png;base64,${qrBase64}`;
+    const qrImageNotice = hostedQrUrl
+      ? ''
+      : '<p style="font-size: 11px; color: #64748b; margin: 10px 0 0;">Your QR code is also attached to this email as a PNG file.</p>';
 
     // Prepare Physical Delivery vs Digital Email Content
     let emailSubject = '';
@@ -176,7 +209,7 @@ export async function sendTagOrderEmail({
 
       <div class="card-qr">
         <p style="font-size: 12px; font-weight: 700; color: #334155; margin: 0 0 12px;">Tag Preview & Instant Testing</p>
-        <img src="${qrDataUri}" alt="ResQTag QR Code" class="qr-image" />
+        <img src="${qrImageSrc}" alt="ResQTag QR Code" class="qr-image" style="display:block;border:0;" />${qrImageNotice}
         <br />
         <div class="token-box">${tokenDisplay}</div>
         <p style="font-size: 11px; color: #64748b; margin: 8px 0 0;">Your live profile is already active and ready to be scanned</p>
@@ -255,7 +288,7 @@ export async function sendTagOrderEmail({
       </div>
 
       <div class="card-qr">
-        <img src="${qrDataUri}" alt="ResQTag QR Code" class="qr-image" />
+        <img src="${qrImageSrc}" alt="ResQTag QR Code" class="qr-image" style="display:block;border:0;" />${qrImageNotice}
         <br />
         <div class="token-box">${tokenDisplay}</div>
         <p style="font-size: 11px; color: #64748b; margin: 8px 0 0;">Scan to immediately test your live emergency profile</p>

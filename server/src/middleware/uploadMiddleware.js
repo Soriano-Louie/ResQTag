@@ -1,32 +1,11 @@
 import multer from 'multer';
-import { v2 as cloudinary } from 'cloudinary';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { config } from '../config/env.js';
+import { isCloudinaryConfigured, uploadImageBuffer } from '../utils/cloudinaryStorage.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Configure Cloudinary if credentials exist
-const isCloudinaryConfigured = Boolean(
-  config.cloudinary?.cloudName &&
-  config.cloudinary?.apiKey &&
-  config.cloudinary?.apiSecret &&
-  config.cloudinary.cloudName !== 'your_cloudinary_cloud_name'
-);
-
-if (isCloudinaryConfigured) {
-  cloudinary.config({
-    cloud_name: config.cloudinary.cloudName,
-    api_key: config.cloudinary.apiKey,
-    api_secret: config.cloudinary.apiSecret,
-    secure: true
-  });
-  console.log('☁️ Cloudinary storage initialized for receipt uploads.');
-} else {
-  console.log('📁 Using local disk storage fallback for receipt uploads.');
-}
 
 // Ensure local fallback directory exists
 const localUploadDir = path.join(__dirname, '../../public/uploads/receipts');
@@ -76,25 +55,16 @@ export function handleReceiptUpload(fieldName = 'receipt') {
       try {
         if (isCloudinaryConfigured) {
           // Upload memory buffer directly to Cloudinary
-          const uploadResult = await new Promise((resolve, reject) => {
-            const uploadStream = cloudinary.uploader.upload_stream(
-              {
-                folder: 'resqtag/receipts',
-                resource_type: 'image',
-                transformation: [{ quality: 'auto', fetch_format: 'auto' }]
-              },
-              (error, result) => {
-                if (error) reject(error);
-                else resolve(result);
-              }
-            );
-            uploadStream.end(req.file.buffer);
+          const secureUrl = await uploadImageBuffer(req.file.buffer, {
+            folder: 'resqtag/receipts'
           });
 
-          // Attach permanent Cloudinary HTTPS URL
-          req.file.path = uploadResult.secure_url;
-          req.file.filename = uploadResult.public_id;
-          req.file.secure_url = uploadResult.secure_url;
+          if (secureUrl) {
+            req.file.path = secureUrl;
+            req.file.secure_url = secureUrl;
+          } else {
+            throw new Error('Cloudinary upload returned no URL.');
+          }
         } else {
           // Local fallback: write buffer to public/uploads/receipts
           const ext = path.extname(req.file.originalname).toLowerCase() || '.png';
