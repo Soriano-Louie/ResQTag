@@ -414,8 +414,9 @@ export default function QRCard({ qr, user, onQRUpdated }) {
       />
 
       {/* Deactivate/Activate Confirm Modal */}
+      {showStatusConfirm && (
       <ModalOverlay
-        isOpen={showStatusConfirm}
+        isOpen
         onClose={() => setShowStatusConfirm(false)}
         className="bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4"
       >
@@ -452,10 +453,12 @@ export default function QRCard({ qr, user, onQRUpdated }) {
             </div>
           </div>
       </ModalOverlay>
+      )}
 
       {/* Regenerate Confirm Modal */}
+      {showRegenerateConfirm && (
       <ModalOverlay
-        isOpen={showRegenerateConfirm}
+        isOpen
         onClose={() => setShowRegenerateConfirm(false)}
         className="bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4"
       >
@@ -486,6 +489,7 @@ export default function QRCard({ qr, user, onQRUpdated }) {
             </div>
           </div>
       </ModalOverlay>
+      )}
     </>
   );
 }

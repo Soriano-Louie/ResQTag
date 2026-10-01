@@ -1217,8 +1217,9 @@ export default function AdminDashboard() {
       {/* ========================================================
           GCASH RECEIPT INSPECTION MODAL
           ======================================================== */}
+      {viewingReceiptOrder && (
       <ModalOverlay
-        isOpen={Boolean(viewingReceiptOrder)}
+        isOpen
         onClose={() => setViewingReceiptOrder(null)}
         className="bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4"
       >
@@ -1322,12 +1323,14 @@ export default function AdminDashboard() {
             </div>
           </div>
       </ModalOverlay>
+      )}
 
       {/* ========================================================
           PAYMENT REJECTION REASON MODAL
           ======================================================== */}
+      {rejectingOrder && (
       <ModalOverlay
-        isOpen={Boolean(rejectingOrder)}
+        isOpen
         onClose={() => setRejectingOrder(null)}
         className="bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4"
       >
@@ -1389,6 +1392,7 @@ export default function AdminDashboard() {
             </form>
           </div>
       </ModalOverlay>
+      )}
     </div>
   );
 }

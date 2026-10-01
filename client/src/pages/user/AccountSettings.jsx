@@ -185,8 +185,9 @@ export default function AccountSettings() {
       </div>
 
       {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
       <ModalOverlay
-        isOpen={showDeleteModal}
+        isOpen
         onClose={() => setShowDeleteModal(false)}
         className="bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4"
       >
@@ -228,6 +229,7 @@ export default function AccountSettings() {
             </form>
           </div>
       </ModalOverlay>
+      )}
     </div>
   );
 }

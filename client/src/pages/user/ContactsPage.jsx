@@ -218,8 +218,9 @@ export default function ContactsPage() {
       />
 
       {/* Delete Confirmation Modal */}
+      {deleteTarget && (
       <ModalOverlay
-        isOpen={Boolean(deleteTarget)}
+        isOpen
         onClose={() => setDeleteTarget(null)}
         className="bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4"
       >
@@ -244,6 +245,7 @@ export default function ContactsPage() {
             </div>
           </div>
       </ModalOverlay>
+      )}
     </div>
   );
 }

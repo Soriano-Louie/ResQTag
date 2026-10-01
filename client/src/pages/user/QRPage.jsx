@@ -503,8 +503,9 @@ export default function QRPage() {
       </div>
 
       {/* Resubmit Payment Modal */}
+      {resubmitOrder && (
       <ModalOverlay
-        isOpen={Boolean(resubmitOrder)}
+        isOpen
         onClose={() => setResubmitOrder(null)}
         className="bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4"
       >
@@ -601,6 +602,7 @@ export default function QRPage() {
             </form>
           </div>
       </ModalOverlay>
+      )}
     </div>
   );
 }
