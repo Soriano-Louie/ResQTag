@@ -45,7 +45,16 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
     shippingAddress: '',
     tagType: 'keychain', // 'keychain' | 'wallet_card' | 'bundle'
     selectedSize: 'standard_keychain_30x50',
-    customDimensions: '',
+    // Custom dimensions (width/height) for single-item custom size
+    customWidthCm: '',
+    customHeightCm: '',
+    // Bundle-specific size selections (for digital email complete kit)
+    bundleKeychainSize: 'square_fob_30x30',
+    bundleKeychainCustomWidth: '',
+    bundleKeychainCustomHeight: '',
+    bundleCardSize: 'standard_cr80_card',
+    bundleCardCustomWidth: '',
+    bundleCardCustomHeight: '',
     quantity: 1,
     gcashRefNumber: '',
     notes: ''
@@ -119,7 +128,14 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
         paymentMethod: nextPaymentMethod,
         gcashRefNumber: nextPaymentMethod === 'cod' ? '' : prev.gcashRefNumber,
         selectedSize: size,
-        customDimensions: type === 'physical_shipping' ? '' : prev.customDimensions
+        customWidthCm: '',
+        customHeightCm: '',
+        bundleKeychainSize: 'square_fob_30x30',
+        bundleKeychainCustomWidth: '',
+        bundleKeychainCustomHeight: '',
+        bundleCardSize: 'standard_cr80_card',
+        bundleCardCustomWidth: '',
+        bundleCardCustomHeight: '',
       };
     });
   };
@@ -149,7 +165,14 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
       ...prev,
       tagType: newType,
       selectedSize: defaultSize,
-      customDimensions: ''
+      customWidthCm: '',
+      customHeightCm: '',
+      bundleKeychainSize: 'square_fob_30x30',
+      bundleKeychainCustomWidth: '',
+      bundleKeychainCustomHeight: '',
+      bundleCardSize: 'standard_cr80_card',
+      bundleCardCustomWidth: '',
+      bundleCardCustomHeight: '',
     }));
   };
 
@@ -206,8 +229,18 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
     if (formData.deliveryType === 'physical_shipping' && !formData.shippingAddress.trim()) {
       return toast.error('Please enter the complete delivery address.');
     }
-    if (formData.deliveryType === 'digital_email' && formData.selectedSize === 'custom' && !formData.customDimensions.trim()) {
-      return toast.error('Please enter your custom dimensions (e.g. 4cm × 6cm).');
+    if (formData.deliveryType === 'digital_email' && formData.tagType !== 'bundle' && formData.selectedSize === 'custom') {
+      if (!formData.customWidthCm || !formData.customHeightCm) {
+        return toast.error('Please enter both Width and Height for your custom dimensions.');
+      }
+    }
+    if (formData.deliveryType === 'digital_email' && formData.tagType === 'bundle') {
+      if (formData.bundleKeychainSize === 'custom' && (!formData.bundleKeychainCustomWidth || !formData.bundleKeychainCustomHeight)) {
+        return toast.error('Please enter Width and Height for your custom keychain dimensions.');
+      }
+      if (formData.bundleCardSize === 'custom' && (!formData.bundleCardCustomWidth || !formData.bundleCardCustomHeight)) {
+        return toast.error('Please enter Width and Height for your custom card dimensions.');
+      }
     }
     if (formData.paymentMethod === 'gcash' && !receiptFile) {
       return toast.error('Please upload your GCash payment receipt screenshot.');
@@ -225,8 +258,19 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
       submissionData.append('shippingAddress', formData.shippingAddress.trim());
       submissionData.append('tagType', formData.tagType);
       submissionData.append('selectedSize', formData.selectedSize);
-      if (formData.deliveryType === 'digital_email' && formData.selectedSize === 'custom') {
-        submissionData.append('customDimensions', formData.customDimensions.trim());
+      if (formData.deliveryType === 'digital_email' && formData.tagType !== 'bundle' && formData.selectedSize === 'custom') {
+        submissionData.append('customDimensions', `${formData.customWidthCm}cm × ${formData.customHeightCm}cm`);
+      }
+      if (formData.deliveryType === 'digital_email' && formData.tagType === 'bundle') {
+        const kSize = formData.bundleKeychainSize === 'custom'
+          ? `custom:${formData.bundleKeychainCustomWidth}×${formData.bundleKeychainCustomHeight}cm`
+          : formData.bundleKeychainSize;
+        const cSize = formData.bundleCardSize === 'custom'
+          ? `custom:${formData.bundleCardCustomWidth}×${formData.bundleCardCustomHeight}cm`
+          : formData.bundleCardSize;
+        submissionData.append('bundleKeychainSize', kSize);
+        submissionData.append('bundleCardSize', cSize);
+        submissionData.append('customDimensions', `Keychain: ${kSize} | Card: ${cSize}`);
       }
       submissionData.append('quantity', formData.quantity);
       if (formData.paymentMethod === 'gcash') {
@@ -585,30 +629,170 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 </div>
               )}
 
-              {/* Bundle Sizes */}
+              {/* Bundle Sizes — digital email: pick sizes for BOTH keychain and card */}
               {formData.tagType === 'bundle' && (
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-slate-700 space-y-1">
-                  <span className="font-bold text-xs block text-slate-900">📦 All Standard Print Templates Included:</span>
-                  <p className="text-[11px] text-slate-600">
-                    Your digital kit includes vector templates for both <strong>Square Keychain (3×3 cm)</strong>, <strong>Rectangle Keychain (3×5 cm)</strong>, and <strong>Standard Wallet Card (CR80: 8.56×5.4 cm)</strong>.
-                  </p>
+                <div className="space-y-3">
+                  {/* Keychain size for bundle */}
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                      <Key className="w-3.5 h-3.5 text-brand-600" /> Keychain Size
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {[
+                        { id: 'square_fob_30x30', label: 'Square Fob', dims: '3 × 3 cm', sub: 'Standard acrylic fob insert' },
+                        { id: 'standard_keychain_30x50', label: 'Rectangle / Oval', dims: '3 × 5 cm', sub: 'Standard rectangular blank' },
+                        { id: 'mini_compact_25x40', label: 'Mini Compact Fob', dims: '2.5 × 4 cm', sub: 'Slim zipper / lanyard pull' },
+                        { id: 'custom', label: 'Custom Size', dims: 'Custom cm', sub: 'Specify your own keychain dimensions' },
+                      ].map(opt => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setFormData(p => ({ ...p, bundleKeychainSize: opt.id, bundleKeychainCustomWidth: '', bundleKeychainCustomHeight: '' }))}
+                          className={`p-2.5 rounded-xl border text-left transition-all ${
+                            formData.bundleKeychainSize === opt.id
+                              ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
+                              : 'border-slate-200 bg-slate-50 text-slate-600'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold">{opt.label}</span>
+                            <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">{opt.dims}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">{opt.sub}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {/* Custom width/height for bundle keychain */}
+                    {formData.bundleKeychainSize === 'custom' && (
+                      <div className="pt-1 space-y-1.5">
+                        <p className="text-[11px] text-slate-500 font-medium">Enter your keychain dimensions in centimeters:</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="font-bold text-slate-700 block mb-1 text-[11px]">Width (cm) <span className="text-rose-500">*</span></label>
+                            <input
+                              type="number"
+                              min="0.5"
+                              step="0.1"
+                              value={formData.bundleKeychainCustomWidth}
+                              onChange={e => setFormData(p => ({ ...p, bundleKeychainCustomWidth: e.target.value }))}
+                              placeholder="e.g. 3.5"
+                              className="w-full px-3 py-2 bg-white border border-brand-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500/20 font-medium text-slate-900"
+                            />
+                          </div>
+                          <div>
+                            <label className="font-bold text-slate-700 block mb-1 text-[11px]">Height (cm) <span className="text-rose-500">*</span></label>
+                            <input
+                              type="number"
+                              min="0.5"
+                              step="0.1"
+                              value={formData.bundleKeychainCustomHeight}
+                              onChange={e => setFormData(p => ({ ...p, bundleKeychainCustomHeight: e.target.value }))}
+                              placeholder="e.g. 5.0"
+                              className="w-full px-3 py-2 bg-white border border-brand-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500/20 font-medium text-slate-900"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Wallet card size for bundle */}
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                      <CreditCard className="w-3.5 h-3.5 text-brand-600" /> Wallet Card Size
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {[
+                        { id: 'standard_cr80_card', label: 'Standard CR80 Card', dims: '8.56 × 5.4 cm', sub: 'Standard wallet card / ID slot' },
+                        { id: 'compact_card_70x45', label: 'Compact Mini Card', dims: '7 × 4.5 cm', sub: 'Compact badge & phone sleeve' },
+                        { id: 'custom', label: 'Custom Card Size', dims: 'Custom cm', sub: 'Specify your own card dimensions', span: true },
+                      ].map(opt => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setFormData(p => ({ ...p, bundleCardSize: opt.id, bundleCardCustomWidth: '', bundleCardCustomHeight: '' }))}
+                          className={`p-2.5 rounded-xl border text-left transition-all ${opt.span ? 'sm:col-span-2' : ''} ${
+                            formData.bundleCardSize === opt.id
+                              ? 'border-brand-600 bg-brand-50/60 text-slate-900 font-bold'
+                              : 'border-slate-200 bg-slate-50 text-slate-600'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold">{opt.label}</span>
+                            <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">{opt.dims}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-normal mt-0.5 block">{opt.sub}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {/* Custom width/height for bundle card */}
+                    {formData.bundleCardSize === 'custom' && (
+                      <div className="pt-1 space-y-1.5">
+                        <p className="text-[11px] text-slate-500 font-medium">Enter your card dimensions in centimeters:</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="font-bold text-slate-700 block mb-1 text-[11px]">Width (cm) <span className="text-rose-500">*</span></label>
+                            <input
+                              type="number"
+                              min="0.5"
+                              step="0.1"
+                              value={formData.bundleCardCustomWidth}
+                              onChange={e => setFormData(p => ({ ...p, bundleCardCustomWidth: e.target.value }))}
+                              placeholder="e.g. 8.56"
+                              className="w-full px-3 py-2 bg-white border border-brand-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500/20 font-medium text-slate-900"
+                            />
+                          </div>
+                          <div>
+                            <label className="font-bold text-slate-700 block mb-1 text-[11px]">Height (cm) <span className="text-rose-500">*</span></label>
+                            <input
+                              type="number"
+                              min="0.5"
+                              step="0.1"
+                              value={formData.bundleCardCustomHeight}
+                              onChange={e => setFormData(p => ({ ...p, bundleCardCustomHeight: e.target.value }))}
+                              placeholder="e.g. 5.4"
+                              className="w-full px-3 py-2 bg-white border border-brand-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500/20 font-medium text-slate-900"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
-              {/* Custom Dimensions Input Box for Email Delivery */}
-              {formData.selectedSize === 'custom' && (
-                <div className="pt-1">
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Custom Dimension Specifications (e.g. 4cm × 6cm):
-                  </label>
-                  <input
-                    type="text"
-                    name="customDimensions"
-                    value={formData.customDimensions}
-                    onChange={handleChange}
-                    placeholder="e.g. 4cm width by 6cm height"
-                    className="w-full px-3 py-2 bg-white border border-brand-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500/20 font-medium text-slate-900"
-                  />
+              {/* Custom Dimensions — two separate Width/Height fields */}
+              {formData.tagType !== 'bundle' && formData.selectedSize === 'custom' && (
+                <div className="pt-1 space-y-1.5">
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Enter your custom dimensions in centimeters — e.g. Width: <strong>4</strong>, Height: <strong>6</strong>
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1 text-[11px]">Width (cm) <span className="text-rose-500">*</span></label>
+                      <input
+                        type="number"
+                        min="0.5"
+                        step="0.1"
+                        value={formData.customWidthCm}
+                        onChange={e => setFormData(p => ({ ...p, customWidthCm: e.target.value }))}
+                        placeholder="e.g. 4"
+                        className="w-full px-3 py-2 bg-white border border-brand-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500/20 font-medium text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1 text-[11px]">Height (cm) <span className="text-rose-500">*</span></label>
+                      <input
+                        type="number"
+                        min="0.5"
+                        step="0.1"
+                        value={formData.customHeightCm}
+                        onChange={e => setFormData(p => ({ ...p, customHeightCm: e.target.value }))}
+                        placeholder="e.g. 6"
+                        className="w-full px-3 py-2 bg-white border border-brand-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500/20 font-medium text-slate-900"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
