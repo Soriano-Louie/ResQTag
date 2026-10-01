@@ -54,6 +54,27 @@ export default function AdminPrintModal({ orderId, orderIds, onClose, onStatusUp
   const isBatch = targetIds.length > 1;
   const totalUnits = items.reduce((acc, it) => acc + (parseInt(it.quantity, 10) || 1), 0);
 
+  // Physical package labels (display-only; keys match the server PHYSICAL_PACKAGES table).
+  const PHYSICAL_PACKAGE_LABELS = {
+    physical_combo: 'Single Combo',
+    physical_family_3: 'Family of 3',
+    physical_family_5: 'Family of 5',
+    physical_family_10: 'Family of 10'
+  };
+  const isPhysicalOrder = (order) => !!(order?.selected_size && PHYSICAL_PACKAGE_LABELS[order.selected_size]);
+
+  const formatTagTypeLabel = (order) => {
+    if (order.tag_type === 'keychain') return '🔑 Keychain';
+    if (order.tag_type === 'wallet_card') return '💳 Card';
+    return isPhysicalOrder(order) ? `⭐ ${PHYSICAL_PACKAGE_LABELS[order.selected_size]} Combo` : '⭐ Kit';
+  };
+
+  const formatTagTypeTitle = (order) => {
+    if (order.tag_type === 'keychain') return '🔑 Keychain Tag';
+    if (order.tag_type === 'wallet_card') return '💳 Wallet Card';
+    return isPhysicalOrder(order) ? `⭐ ${PHYSICAL_PACKAGE_LABELS[order.selected_size]} Combo Kit` : '⭐ Complete Kit';
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -156,12 +177,14 @@ export default function AdminPrintModal({ orderId, orderIds, onClose, onStatusUp
                       </div>
                       <div className="text-right shrink-0">
                         <span className="font-bold text-slate-800 text-[11px] block uppercase">
-                          {order.tag_type === 'keychain' ? '🔑 Keychain' : order.tag_type === 'wallet_card' ? '💳 Card' : '⭐ Kit'}
+                          {formatTagTypeLabel(order)}
                         </span>
                         <span className="text-[10px] font-mono text-slate-500 block">
-                          {order.selected_size === 'custom' && order.custom_dimensions
-                            ? `Custom: ${order.custom_dimensions}`
-                            : `${order.quantity}x`}
+                          {isPhysicalOrder(order)
+                            ? `${order.quantity} tag sets`
+                            : order.selected_size === 'custom' && order.custom_dimensions
+                              ? `Custom: ${order.custom_dimensions}`
+                              : `${order.quantity}x`}
                         </span>
                       </div>
                     </div>
@@ -193,12 +216,14 @@ export default function AdminPrintModal({ orderId, orderIds, onClose, onStatusUp
                       <div className="text-right">
                         <span className="text-[10px] uppercase font-bold text-slate-400 block">Requested Format & Scale</span>
                         <span className="font-black text-xs text-rose-600 uppercase">
-                          {ordersData[0]?.tag_type === 'keychain' ? '🔑 Keychain Tag' : ordersData[0]?.tag_type === 'wallet_card' ? '💳 Wallet Card' : '⭐ Complete Kit'}
+                          {formatTagTypeTitle(ordersData[0])}
                         </span>
                         <span className="text-[10px] font-mono text-slate-500 block">
-                          {ordersData[0]?.selected_size === 'custom' && ordersData[0]?.custom_dimensions
-                            ? `Custom: ${ordersData[0]?.custom_dimensions}`
-                            : ordersData[0]?.selected_size || 'Standard Scale'}
+                          {isPhysicalOrder(ordersData[0])
+                            ? 'Fixed sizes · Square Keychain (3×3 cm) + CR80 Card (8.56×5.4 cm)'
+                            : ordersData[0]?.selected_size === 'custom' && ordersData[0]?.custom_dimensions
+                              ? `Custom: ${ordersData[0]?.custom_dimensions}`
+                              : ordersData[0]?.selected_size || 'Standard Scale'}
                         </span>
                       </div>
                     </div>

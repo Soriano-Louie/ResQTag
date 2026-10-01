@@ -28,6 +28,19 @@ import { useToast } from '../../context/ToastContext';
 import ModalOverlay from '../common/ModalOverlay';
 import { isValidEmail, ORDER_EMAIL_MAX_LENGTH } from '../../utils/validation';
 
+// Physical tag packages — each unit ALWAYS includes BOTH the fixed-size square
+// keychain (code 'square_fob_30x30', 3.0 × 3.0 cm) and the standard CR80
+// wallet card (code 'standard_cr80_card', 8.56 × 5.4 cm). No other sizes are
+// offered for physical tags. `sets` = keychain+card pairs per purchase unit.
+const PHYSICAL_PACKAGES = [
+  { key: 'physical_combo', label: 'Single Combo', tagline: '1 keychain + 1 wallet card', pricePeso: 100, sets: 1 },
+  { key: 'physical_family_3', label: 'Family of 3', tagline: '3 keychains + 3 wallet cards', pricePeso: 210, sets: 3 },
+  { key: 'physical_family_5', label: 'Family of 5', tagline: '5 keychains + 5 wallet cards', pricePeso: 350, sets: 5 },
+  { key: 'physical_family_10', label: 'Family of 10', tagline: '10 keychains + 10 wallet cards', pricePeso: 700, sets: 10 }
+];
+
+const getPhysicalPackage = (key) => PHYSICAL_PACKAGES.find((p) => p.key === key);
+
 export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess }) {
   const toast = useToast();
   const fileInputRef = useRef(null);
@@ -58,6 +71,9 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
     bundleCardCustomWidth: '',
     bundleCardCustomHeight: '',
     quantity: 1,
+    // Bundle multiplier for physical family packages; the submitted quantity is
+    // derived on submit as package.sets × physicalQty (see handleSubmit).
+    physicalQty: 1,
     gcashRefNumber: '',
     notes: ''
   });
@@ -114,16 +130,32 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
     if (nextPaymentMethod !== formData.paymentMethod) clearReceipt();
 
     setFormData(prev => {
-      let size = prev.selectedSize;
       if (type === 'physical_shipping') {
-        if (prev.tagType === 'keychain') size = 'square_fob_30x30';
-        else if (prev.tagType === 'wallet_card') size = 'standard_cr80_card';
-        else size = 'standard';
-      } else {
-        if (prev.tagType === 'keychain') size = 'standard_keychain_30x50';
-        else if (prev.tagType === 'wallet_card') size = 'standard_cr80_card';
-        else size = 'complete_bundle_all_sizes';
+        // Physical orders are fixed combo packages (keychain + card). Start at
+        // the default Single Combo until the user picks a package below.
+        return {
+          ...prev,
+          deliveryType: type,
+          tagType: 'bundle',
+          selectedSize: 'physical_combo',
+          physicalQty: 1,
+          paymentMethod: nextPaymentMethod,
+          gcashRefNumber: nextPaymentMethod === 'cod' ? '' : prev.gcashRefNumber,
+          customWidthCm: '',
+          customHeightCm: '',
+          bundleKeychainSize: 'square_fob_30x30',
+          bundleKeychainCustomWidth: '',
+          bundleKeychainCustomHeight: '',
+          bundleCardSize: 'standard_cr80_card',
+          bundleCardCustomWidth: '',
+          bundleCardCustomHeight: ''
+        };
       }
+      // Digital email delivery — keep the existing default size mapping.
+      let size = prev.selectedSize;
+      if (prev.tagType === 'keychain') size = 'standard_keychain_30x50';
+      else if (prev.tagType === 'wallet_card') size = 'standard_cr80_card';
+      else size = 'complete_bundle_all_sizes';
       return {
         ...prev,
         deliveryType: type,
@@ -137,7 +169,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
         bundleKeychainCustomHeight: '',
         bundleCardSize: 'standard_cr80_card',
         bundleCardCustomWidth: '',
-        bundleCardCustomHeight: '',
+        bundleCardCustomHeight: ''
       };
     });
   };
@@ -155,9 +187,8 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
   const handleTagTypeChange = (newType) => {
     let defaultSize = 'standard';
     if (formData.deliveryType === 'physical_shipping') {
-      if (newType === 'keychain') defaultSize = 'square_fob_30x30';
-      else if (newType === 'wallet_card') defaultSize = 'standard_cr80_card';
-      else defaultSize = 'standard';
+      // Physical orders are always the fixed combo kit.
+      defaultSize = 'physical_combo';
     } else {
       if (newType === 'keychain') defaultSize = 'standard_keychain_30x50';
       else if (newType === 'wallet_card') defaultSize = 'standard_cr80_card';
@@ -178,10 +209,39 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
     }));
   };
 
+  const handlePhysicalPackageChange = (key) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedSize: key,
+      physicalQty: 1
+    }));
+  };
+
+  const handlePhysicalQtyChange = (delta) => {
+    const pkg = getPhysicalPackage(formData.selectedSize);
+    if (!pkg) return;
+    const current = formData.physicalQty || 1;
+    // Keep the total number of tag sets within the server cap of 20.
+    const maxQty = Math.max(1, Math.floor(20 / pkg.sets));
+    setFormData(prev => ({
+      ...prev,
+      physicalQty: Math.min(maxQty, Math.max(1, current + delta))
+    }));
+  };
+
   if (!isOpen) return null;
 
   const isPhysicalDelivery = formData.deliveryType === 'physical_shipping';
   const isCashOnDelivery = isPhysicalDelivery && formData.paymentMethod === 'cod';
+
+  const selectedPhysicalPackage = getPhysicalPackage(formData.selectedSize);
+  const physicalBundleQty = formData.physicalQty || 1;
+  const physicalTotalSets = selectedPhysicalPackage
+    ? selectedPhysicalPackage.sets * physicalBundleQty
+    : 0;
+  const physicalTotalPeso = selectedPhysicalPackage
+    ? selectedPhysicalPackage.pricePeso * physicalBundleQty
+    : 0;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -236,6 +296,12 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
     if (formData.deliveryType === 'physical_shipping' && !formData.shippingAddress.trim()) {
       return toast.error('Please enter the complete delivery address.');
     }
+    if (isPhysicalDelivery && !selectedPhysicalPackage) {
+      return toast.error('Please choose a physical package (combo or family bundle).');
+    }
+    if (isPhysicalDelivery && (physicalTotalSets < 1 || physicalTotalSets > 20)) {
+      return toast.error('Total tag sets must be between 1 and 20.');
+    }
     if (formData.deliveryType === 'digital_email' && formData.tagType !== 'bundle' && formData.selectedSize === 'custom') {
       if (!formData.customWidthCm || !formData.customHeightCm) {
         return toast.error('Please enter both Width and Height for your custom dimensions.');
@@ -279,7 +345,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
         submissionData.append('bundleCardSize', cSize);
         submissionData.append('customDimensions', `Keychain: ${kSize} | Card: ${cSize}`);
       }
-      submissionData.append('quantity', formData.quantity);
+      submissionData.append('quantity', isPhysicalDelivery ? physicalTotalSets : formData.quantity);
       if (formData.paymentMethod === 'gcash') {
         submissionData.append('gcashRefNumber', formData.gcashRefNumber.trim());
       }
@@ -392,19 +458,43 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                   )}
                 </div>
                 <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-                  Official printed & laminated tag (square keychain or card) manufactured and shipped to your address. Pay via GCash or cash on delivery.
+                  Official printed &amp; laminated <strong>combo kit (keychain + wallet card)</strong> in fixed standard sizes, delivered to your address. Pay via GCash or cash on delivery.
                 </p>
               </button>
+
+              {isPhysicalDelivery && (
+                <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200/80 rounded-xl text-amber-900">
+                  <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] leading-relaxed">
+                    <strong>Delivery area:</strong> Physical delivery is currently available <strong>within Taguig only</strong>. We do not accommodate delivery outside Taguig yet.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* 2. Format Selection */}
           <div className="space-y-2">
-            <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
-              <span>2. Select Tag Format</span>
-              <span className="text-rose-500">*</span>
-            </label>
-            <div className="grid grid-cols-3 gap-2">
+            {isPhysicalDelivery ? (
+              <>
+                <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                  <span>2. Tag Format</span>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Fixed Combo</span>
+                </label>
+                <div className="p-3 rounded-2xl bg-brand-50/40 border border-brand-300 flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-slate-700 leading-relaxed">
+                    <strong>Keychain + Wallet Card</strong> — both are always included in every physical package, in fixed standard sizes: <strong>Square Keychain (3.0 × 3.0 cm)</strong> and <strong>Standard Wallet Card (CR80: 8.56 × 5.40 cm)</strong>.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                  <span>2. Select Tag Format</span>
+                  <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {/* Keychain */}
               <button
                 type="button"
@@ -477,35 +567,101 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 </span>
               </button>
             </div>
+              </>
+            )}
           </div>
 
           {/* 3. Sizing Section: Conditional for Physical Delivery vs Digital Email Delivery */}
           {formData.deliveryType === 'physical_shipping' ? (
-            /* Physical Delivery: Fixed Standard Manufacturing Dimensions */
-            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-800 text-xs">3. Physical Manufacturing Specifications</span>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Fixed Standard Scale
-                </span>
+            /* Physical Delivery: Fixed Combo Package Picker */
+            <div className="space-y-2">
+              <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                <span>3. Choose Physical Package</span>
+                <span className="text-rose-500">*</span>
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {PHYSICAL_PACKAGES.map((pkg) => {
+                  const selected = formData.selectedSize === pkg.key;
+                  return (
+                    <button
+                      key={pkg.key}
+                      type="button"
+                      onClick={() => handlePhysicalPackageChange(pkg.key)}
+                      className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all relative ${
+                        selected
+                          ? 'border-brand-600 bg-brand-50/60 ring-2 ring-brand-500/20 text-slate-900 shadow-sm'
+                          : 'border-slate-200 bg-slate-50 hover:bg-slate-100/60 text-slate-600'
+                      }`}
+                    >
+                      {selected && (
+                        <CheckCircle2 className="w-4 h-4 text-brand-600 absolute top-2 right-2" />
+                      )}
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1 text-slate-900">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                          <span className="font-black text-xs">{pkg.label}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 leading-tight block">{pkg.tagline}</span>
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className={`text-sm font-black ${selected ? 'text-brand-700' : 'text-slate-800'}`}>
+                          ₱{pkg.pricePeso}
+                        </span>
+                        <span className="text-[9px] text-slate-400">{pkg.sets} set{pkg.sets === 1 ? '' : 's'} included</span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-              <div className="text-[11px] text-slate-600 leading-relaxed">
-                {formData.tagType === 'keychain' && (
-                  <p>
-                    🏷️ <strong>Square Acrylic Keychain:</strong> Manufactured as a standard <strong>3.0 × 3.0 cm square tag</strong> fitted securely inside a transparent acrylic keychain fob.
-                  </p>
-                )}
-                {formData.tagType === 'wallet_card' && (
-                  <p>
-                    💳 <strong>Emergency Wallet Card:</strong> Manufactured in standard ISO CR80 format (<strong>8.56 × 5.40 cm</strong>), thermally laminated to fit credit card wallet slots.
-                  </p>
-                )}
-                {formData.tagType === 'bundle' && (
-                  <p>
-                    📦 <strong>Complete Kit:</strong> Includes both the <strong>Square Keychain Tag (3.0 × 3.0 cm)</strong> and <strong>Standard Wallet Card (8.56 × 5.40 cm)</strong>.
-                  </p>
-                )}
-              </div>
+
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Every physical package is manufactured at fixed standard sizes — <strong>Square Keychain (3.0 × 3.0 cm)</strong> + <strong>Wallet Card (CR80: 8.56 × 5.4 cm)</strong>. No other sizes are offered for physical tags.
+              </p>
+
+              {/* Bundle quantity stepper (family bundles only) */}
+              {selectedPhysicalPackage && selectedPhysicalPackage.sets > 1 && (
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <span className="font-bold text-slate-800 block text-xs">Bundle Quantity</span>
+                    <span className="text-[10px] text-slate-500 block">
+                      Order multiple {selectedPhysicalPackage.label} bundles — each adds {selectedPhysicalPackage.sets} tag sets
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handlePhysicalQtyChange(-1)}
+                      className="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 active:scale-95 font-black text-slate-600 transition-all"
+                      aria-label="Decrease bundle quantity"
+                    >−</button>
+                    <span className="min-w-10 text-center font-black text-sm bg-white border border-slate-200 rounded-xl px-2.5 py-1.5">
+                      {formData.physicalQty}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handlePhysicalQtyChange(1)}
+                      className="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 active:scale-95 font-black text-slate-600 transition-all"
+                      aria-label="Increase bundle quantity"
+                    >+</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Live order summary */}
+              {selectedPhysicalPackage && (
+                <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-slate-900 text-white">
+                  <div className="min-w-0">
+                    <span className="text-[10px] uppercase text-slate-400 block font-semibold">Order Summary</span>
+                    <span className="text-[11px] text-slate-200 block truncate">
+                      {selectedPhysicalPackage.label}
+                      {formData.physicalQty > 1 && ` × ${formData.physicalQty}`}
+                      {` · ${physicalTotalSets} tag set${physicalTotalSets === 1 ? '' : 's'}`}
+                    </span>
+                  </div>
+                  <span className="text-sm font-black text-emerald-100 shrink-0">₱{physicalTotalPeso}</span>
+                </div>
+              )}
             </div>
           ) : (
             /* Digital Email Delivery: Customizable Dimensions for DIY Self-Printing */
@@ -889,6 +1045,10 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                     className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium text-slate-900 resize-none"
                   />
                 </div>
+                <p className="text-[10px] text-amber-700 mt-1 flex items-center gap-1">
+                  <Info className="w-3 h-3 shrink-0" />
+                  Physical delivery is currently only available within Taguig.
+                </p>
               </div>
             )}
           </div>
@@ -972,7 +1132,11 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                   <span className="px-2 py-0.5 rounded-lg bg-white/20 text-[10px] font-black tracking-wider uppercase">
                     GCash Payment
                   </span>
-                  <span className="text-xs font-bold text-blue-100">Send Payment to:</span>
+                  <span className="text-xs font-bold text-blue-100">
+                    {isPhysicalDelivery
+                      ? `Amount to Pay: ₱${physicalTotalPeso}`
+                      : 'Send Payment to:'}
+                  </span>
                 </div>
                 <span className="text-[11px] font-bold text-blue-100">Official Merchant</span>
               </div>
@@ -1097,7 +1261,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 </p>
 
                 <div className="bg-white/10 backdrop-blur-sm px-3.5 py-2.5 rounded-xl border border-white/15 text-[11px] text-emerald-50 leading-relaxed">
-                  Please prepare the exact cash amount on the delivery date and have your ResQTag ready for the
+                  Please prepare the exact cash amount — <strong>₱{physicalTotalPeso}</strong> — on the delivery date and have your ResQTag ready for the
                   courier. Our team marks the order as paid once the courier confirms the handover.
                 </div>
               </div>
@@ -1124,8 +1288,10 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-[11px] leading-relaxed">
               {isCashOnDelivery
-                ? 'Once submitted, our admin team will review your shipping details and start production. No receipt is needed — payment is collected in cash by our courier upon delivery of the physical tag.'
-                : `Once submitted, our admin team will verify your GCash payment screenshot. Upon confirmation, your official encrypted QR tag kit will be instantly delivered to ${formData.targetEmail || 'your email'} via Brevo.`}
+                ? `Once submitted, our admin team will review your ${selectedPhysicalPackage?.label?.toLowerCase() || 'physical'} order and start production. No receipt is needed — payment is collected in cash by our courier on delivery.`
+                : isPhysicalDelivery
+                  ? `Once submitted, our admin team will verify your GCash payment screenshot and start production of your ${selectedPhysicalPackage?.label?.toLowerCase() || 'physical'} tag kit.`
+                  : `Once submitted, our admin team will verify your GCash payment screenshot. Upon confirmation, your official encrypted QR tag kit will be instantly delivered to ${formData.targetEmail || 'your email'} via Brevo.`}
             </p>
           </div>
 
@@ -1151,7 +1317,11 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
               ) : (
                 <>
                   <Package className="w-4 h-4" />
-                  {isCashOnDelivery ? 'Place Order — Cash on Delivery' : 'Submit Order & Payment'}
+                  {isCashOnDelivery
+                    ? `Place Order — Cash on Delivery (₱${physicalTotalPeso})`
+                    : isPhysicalDelivery
+                      ? `Place Order — ₱${physicalTotalPeso}`
+                      : 'Submit Order & Payment'}
                 </>
               )}
             </button>

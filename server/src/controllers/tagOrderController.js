@@ -6,6 +6,23 @@ import {
 } from '../utils/emailValidation.js';
 
 // ==========================================
+// PHYSICAL TAG PACKAGES
+// ==========================================
+// Every physical order is a fixed combo package that ALWAYS includes BOTH the
+// square keychain (code 'square_fob_30x30', 3.0 × 3.0 cm) and the standard
+// CR80 wallet card (code 'standard_cr80_card', 8.56 × 5.4 cm) — no other sizes
+// are offered for physical tags. `sets` is how many keychain+card pairs one
+// purchase unit contains and `pricePeso` is that unit's price. `quantity` on an
+// order is the TOTAL number of tag sets (= package.sets × bundle multiplier),
+// so a Family of 5 × 2 stores quantity = 10.
+const PHYSICAL_PACKAGES = {
+  physical_combo: { label: 'Single Combo', pricePeso: 100, sets: 1 },
+  physical_family_3: { label: 'Family of 3', pricePeso: 210, sets: 3 },
+  physical_family_5: { label: 'Family of 5', pricePeso: 350, sets: 5 },
+  physical_family_10: { label: 'Family of 10', pricePeso: 700, sets: 10 }
+};
+
+// ==========================================
 // USER CONTROLLERS
 // ==========================================
 
@@ -72,12 +89,41 @@ export async function createOrder(req, res) {
     }
 
     const validTagTypes = ['keychain', 'wallet_card', 'bundle'];
-    const chosenType = validTagTypes.includes(tagType) ? tagType : 'keychain';
+
+    // Physical orders are fixed combo packages: always tag_type='bundle' and
+    // selected_size must be a known package key (see PHYSICAL_PACKAGES above).
+    // Digital orders keep the existing free tag-type selection.
+    let physicalPackage = null;
+    if (chosenDeliveryType === 'physical_shipping') {
+      physicalPackage = PHYSICAL_PACKAGES[selectedSize];
+      if (!physicalPackage) {
+        return res.status(400).json({
+          message: 'Please select a valid physical package (combo or family bundle).'
+        });
+      }
+    }
+
+    const chosenType = chosenDeliveryType === 'physical_shipping'
+      ? 'bundle' // Combo: keychain + wallet card are always both included
+      : (validTagTypes.includes(tagType) ? tagType : 'keychain');
 
     const qty = parseInt(quantity, 10) || 1;
     if (qty < 1 || qty > 20) {
       return res.status(400).json({ message: 'Quantity must be between 1 and 20.' });
     }
+
+    // For bundles (family of 3/5/10) the total quantity must be an exact
+    // multiple of the package size, which lets us derive the bundle multiplier
+    // and total price without trusting any client-computed amount.
+    if (physicalPackage && qty % physicalPackage.sets !== 0) {
+      return res.status(400).json({
+        message: `Quantity must be a whole multiple of ${physicalPackage.sets} for the ${physicalPackage.label} package.`
+      });
+    }
+
+    const physicalTotalPeso = physicalPackage
+      ? physicalPackage.pricePeso * (qty / physicalPackage.sets)
+      : null;
 
     // Handle receipt upload from multer / Cloudinary
     let receiptUrl = null;
@@ -142,14 +188,16 @@ export async function createOrder(req, res) {
       message: chosenDeliveryType === 'digital_email'
         ? 'Digital ResQTag delivery request submitted! Our team will verify your GCash receipt and dispatch your QR templates via email.'
         : isCashOnDelivery
-          ? 'Physical ResQTag order placed with Cash on Delivery! Please prepare the exact amount for our courier on the delivery date.'
-          : 'Physical ResQTag order request submitted successfully!',
+          ? `Physical ResQTag order placed with Cash on Delivery! ${physicalPackage.label} · ${qty} tag set${qty === 1 ? '' : 's'} · ₱${physicalTotalPeso}. Please prepare the exact amount for our courier on the delivery date.`
+          : `Physical ResQTag order (${physicalPackage.label} · ${qty} tag set${qty === 1 ? '' : 's'} · ₱${physicalTotalPeso}) placed successfully! Our team will verify your payment and start production.`,
       orderId: insertRes.insertId,
       deliveryType: chosenDeliveryType,
       paymentMethod: chosenPaymentMethod,
       targetEmail: emailToUse,
       tagType: chosenType,
       selectedSize: selectedSize || 'standard',
+      packageLabel: physicalPackage ? physicalPackage.label : null,
+      totalPeso: physicalTotalPeso,
       status: 'pending',
       paymentStatus: initialPaymentStatus
     });

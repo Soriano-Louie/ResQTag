@@ -141,9 +141,28 @@ export default function QRPage() {
       mini_compact_25x40: 'Mini Compact (2.5×4 cm)',
       standard_cr80_card: 'Standard Wallet Card (CR80: 8.56×5.4 cm)',
       compact_card_70x45: 'Compact Card (7×4.5 cm)',
-      complete_bundle_all_sizes: 'Complete Bundle (All Sizes)'
+      complete_bundle_all_sizes: 'Complete Bundle (All Sizes)',
+      physical_combo: 'Combo · Keychain (3×3 cm) + Card (CR80)',
+      physical_family_3: 'Family of 3 · Fixed Keychains + Cards',
+      physical_family_5: 'Family of 5 · Fixed Keychains + Cards',
+      physical_family_10: 'Family of 10 · Fixed Keychains + Cards'
     };
     return map[order.selected_size] || order.selected_size || 'Standard';
+  };
+
+  const formatOrderItem = (order) => {
+    if (order.tag_type === 'keychain') return `${order.quantity}x Keychain Tag`;
+    if (order.tag_type === 'wallet_card') return `${order.quantity}x Wallet Card`;
+    const pkgLabels = {
+      physical_combo: 'Single Combo',
+      physical_family_3: 'Family of 3',
+      physical_family_5: 'Family of 5',
+      physical_family_10: 'Family of 10'
+    };
+    if (pkgLabels[order.selected_size]) {
+      return `${order.quantity} tag sets · ${pkgLabels[order.selected_size]}`;
+    }
+    return `${order.quantity}x Complete Bundle`;
   };
 
   const getStatusBadge = (status) => {
@@ -322,7 +341,7 @@ export default function QRPage() {
                     <div>
                       <span className="text-[10px] text-slate-400 font-bold uppercase block">Format & Size</span>
                       <span className="font-bold text-slate-900 block">
-                        {order.quantity}x {order.tag_type === 'keychain' ? 'Keychain Tag' : order.tag_type === 'wallet_card' ? 'Wallet Card' : 'Complete Bundle'}
+                        {formatOrderItem(order)}
                       </span>
                       <span className="text-[11px] text-slate-500 font-mono">{formatSizeTitle(order)}</span>
                     </div>

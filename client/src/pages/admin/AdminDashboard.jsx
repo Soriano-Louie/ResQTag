@@ -281,6 +281,34 @@ export default function AdminDashboard() {
     }
   };
 
+  // Physical combo package helpers (display-only; keys/prices match the order
+  // modal and the server-validated PHYSICAL_PACKAGES table).
+  const PHYSICAL_PACKAGE_LABELS = {
+    physical_combo: 'Single Combo',
+    physical_family_3: 'Family of 3',
+    physical_family_5: 'Family of 5',
+    physical_family_10: 'Family of 10'
+  };
+  const PHYSICAL_PACKAGE_PRICES = { physical_combo: 100, physical_family_3: 210, physical_family_5: 350, physical_family_10: 700 };
+  const PHYSICAL_PACKAGE_SETS = { physical_combo: 1, physical_family_3: 3, physical_family_5: 5, physical_family_10: 10 };
+
+  const isPhysicalPackageOrder = (order) => !!(order?.selected_size && PHYSICAL_PACKAGE_LABELS[order.selected_size]);
+
+  const getPhysicalPackagePrice = (order) => {
+    if (!isPhysicalPackageOrder(order)) return null;
+    const quantity = parseInt(order.quantity, 10) || PHYSICAL_PACKAGE_SETS[order.selected_size];
+    return PHYSICAL_PACKAGE_PRICES[order.selected_size] * (quantity / PHYSICAL_PACKAGE_SETS[order.selected_size]);
+  };
+
+  const formatOrderItemLabel = (order) => {
+    if (order.tag_type === 'keychain') return `${order.quantity}x Keychain`;
+    if (order.tag_type === 'wallet_card') return `${order.quantity}x Wallet Card`;
+    if (isPhysicalPackageOrder(order)) {
+      return `${order.quantity} tag sets · ${PHYSICAL_PACKAGE_LABELS[order.selected_size]}`;
+    }
+    return `${order.quantity}x Bundle`;
+  };
+
   const formatSizeLabel = (order) => {
     if (order.selected_size === 'custom') {
       return order.custom_dimensions ? `Custom: ${order.custom_dimensions}` : 'Custom Size';
@@ -292,7 +320,11 @@ export default function AdminDashboard() {
       mini_compact_25x40: 'Mini (2.5×4 cm)',
       standard_cr80_card: 'Card (CR80: 8.56×5.4 cm)',
       compact_card_70x45: 'Compact Card (7×4.5 cm)',
-      complete_bundle_all_sizes: 'Complete Bundle (All Sizes)'
+      complete_bundle_all_sizes: 'Complete Bundle (All Sizes)',
+      physical_combo: 'Combo (Keychain + Card)',
+      physical_family_3: 'Family of 3 Bundle',
+      physical_family_5: 'Family of 5 Bundle',
+      physical_family_10: 'Family of 10 Bundle'
     };
     return sizeMap[order.selected_size] || order.selected_size || 'Standard';
   };
@@ -802,11 +834,16 @@ export default function AdminDashboard() {
 
                         <td className="p-4">
                           <span className="font-bold text-slate-800 block text-xs">
-                            {order.quantity}x {order.tag_type === 'keychain' ? 'Keychain' : order.tag_type === 'wallet_card' ? 'Wallet Card' : 'Bundle'}
+                            {formatOrderItemLabel(order)}
                           </span>
                           <span className="text-[11px] text-slate-500 font-mono block">
                             {formatSizeLabel(order)}
                           </span>
+                          {isPhysicalPackageOrder(order) && (
+                            <span className="text-[11px] text-emerald-700 font-bold block">
+                              ₱{getPhysicalPackagePrice(order)}
+                            </span>
+                          )}
                         </td>
 
                         {/* GCash Receipt Column */}
@@ -1275,7 +1312,7 @@ export default function AdminDashboard() {
               <div>
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">Format & Size</span>
                 <span className="font-bold text-slate-900">
-                  {viewingReceiptOrder.quantity}x {viewingReceiptOrder.tag_type} ({formatSizeLabel(viewingReceiptOrder)})
+                  {formatOrderItemLabel(viewingReceiptOrder)} ({formatSizeLabel(viewingReceiptOrder)})
                 </span>
               </div>
               <div>
