@@ -853,7 +853,11 @@ export default function AdminDashboard() {
                         </td>
 
                         {/* Actions Column */}
-                        <td className="p-4 text-right space-x-1.5">
+                        <td className="p-4">
+                          {/* flex-wrap + gap gives real spacing on both axes, so the
+                              buttons stay separated when they stack on small screens
+                              (space-x-1.5 only added horizontal margin). */}
+                          <div className="flex flex-wrap justify-end gap-1.5">
                           {/* Quick Verify & Send Email Button */}
                           {order.payment_status === 'submitted' && !isCod && (
                             <button
@@ -958,6 +962,7 @@ export default function AdminDashboard() {
                             <option value="delivered">Delivered / Emailed</option>
                             <option value="cancelled">Cancelled</option>
                           </select>
+                          </div>
                         </td>
                       </tr>
                     );
