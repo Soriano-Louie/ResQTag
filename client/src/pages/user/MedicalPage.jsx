@@ -4,7 +4,7 @@ import { profileService } from '../../services/profileService';
 import { useToast } from '../../context/ToastContext';
 import { Activity, Droplet, AlertTriangle, Pill, HeartPulse, FileText, Save, ArrowLeft, Loader2 } from 'lucide-react';
 
-const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Unknown / Unspecified'];
+import { BLOOD_TYPES } from '../../utils/bloodTypes';
 
 export default function MedicalPage() {
   const toast = useToast();

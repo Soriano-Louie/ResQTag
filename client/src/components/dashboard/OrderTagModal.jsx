@@ -50,13 +50,19 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
   const [memberIds, setMemberIds] = useState([]);
   const [includeSelf, setIncludeSelf] = useState(false);
   const [familyError, setFamilyError] = useState('');
+  const [familyLoading, setFamilyLoading] = useState(true);
   useEffect(() => {
     if (!isOpen) return;
+    let active = true;
+    setFamilyLoading(true);
     setFamilyError('');
     api.get('/family').then(({ data }) => {
+      if (!active) return;
       setMembers(data.members);
       setMemberIds(ids => ids.filter(id => data.members.some(m => m.member_id === id)));
-    }).catch(err => setFamilyError(err.message));
+    }).catch(err => { if (active) setFamilyError(err.message); })
+      .finally(() => { if (active) setFamilyLoading(false); });
+    return () => { active = false; };
   }, [isOpen]);
 
   const [loading, setLoading] = useState(false);
@@ -249,6 +255,8 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
   const isCashOnDelivery = isPhysicalDelivery && formData.paymentMethod === 'cod';
 
   const selectedPhysicalPackage = getPhysicalPackage(formData.selectedSize);
+  const availablePeople = members.length + 1;
+  const missingPeople = Math.max(0, (selectedPhysicalPackage?.sets || 0) - availablePeople);
   const physicalBundleQty = formData.physicalQty || 1;
   const physicalTotalSets = selectedPhysicalPackage
     ? selectedPhysicalPackage.sets * physicalBundleQty
@@ -636,6 +644,15 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                   );
                 })}
               </div>
+
+              {!familyLoading && !familyError && missingPeople > 0 && (
+                <div role="alert" className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
+                  <p><strong>Not enough members for {selectedPhysicalPackage.label}.</strong> This package needs {selectedPhysicalPackage.sets} people. You currently have {availablePeople} available, including yourself.</p>
+                  <p className="mt-1">
+                    <Link to="/family" onClick={onClose} className="font-semibold underline">Add at least {missingPeople} more family member{missingPeople === 1 ? '' : 's'}</Link> and include your own tag, or choose a smaller package.
+                  </p>
+                </div>
+              )}
 
               <p className="text-[11px] text-slate-500 leading-relaxed">
                 Every physical package is manufactured at fixed standard sizes — <strong>Square Keychain (3.0 × 3.0 cm)</strong> + <strong>Wallet Card (CR80: 8.56 × 5.4 cm)</strong>. No other sizes are offered for physical tags.
@@ -1310,7 +1327,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
               name="notes"
               value={formData.notes}
               onChange={handleChange}
-              placeholder="e.g. Please format in high-contrast or note special request"
+              placeholder="e.g. Near the barangay hall, beside ABC Pharmacy. Look for the blue gate."
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-brand-500/20 font-medium text-slate-900"
             />
           </div>

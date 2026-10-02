@@ -195,9 +195,15 @@ export default function PrintableTag({ qr, user, tagType = 'bundle', quantity = 
                 const w = dims.widthCm;
                 const h = dims.heightCm;
 
-                // Dynamic sizing calculations to ensure fit without clipping
-                const qrPixelSize = Math.min(Math.floor(w * 17), Math.floor(h * 15), 58);
                 const isMini = w <= 2.6 || h <= 3.6;
+                // Fill the space between the existing brand and footer, keeping
+                // the printed dimensions and a four-module QR quiet zone intact.
+                const pixelsPerCm = 96 / 2.54;
+                const paddingPx = (isMini ? 0.1 : 0.15) * pixelsPerCm;
+                const qrPixelSize = Math.floor(Math.min(
+                  w * pixelsPerCm - paddingPx * 2 - 6,
+                  h * pixelsPerCm - paddingPx * 2 - (isMini ? 20 : 24) - 6
+                ));
 
                 return (
                   <div key={`kc-${item.qr?.qr_token || idx}-${idx}`} className="flex flex-col gap-1">
@@ -239,7 +245,7 @@ export default function PrintableTag({ qr, user, tagType = 'bundle', quantity = 
 
                         {/* QR Code */}
                         <div className="border border-slate-200 rounded bg-white shrink-0 p-0.5 flex items-center justify-center">
-                          <QRCodeSVG value={emergencyUrl} size={qrPixelSize} level="H" />
+                          <QRCodeSVG value={emergencyUrl} size={qrPixelSize} level="H" includeMargin />
                         </div>
 
                         {/* Footer */}
@@ -345,6 +351,17 @@ export default function PrintableTag({ qr, user, tagType = 'bundle', quantity = 
                           boxSizing: 'border-box',
                         }}
                       >
+                        {/* Faded medical cross behind the front-card content. */}
+                        <div
+                          aria-hidden="true"
+                          className="absolute bottom-0 left-0 pointer-events-none"
+                          style={{
+                            width: '1.8cm',
+                            height: '1.8cm',
+                            background: 'linear-gradient(45deg, rgba(225, 29, 72, 0.22), rgba(225, 29, 72, 0.02))',
+                            clipPath: 'polygon(33% 0, 67% 0, 67% 33%, 100% 33%, 100% 67%, 67% 67%, 67% 100%, 33% 100%, 33% 67%, 0 67%, 0 33%, 33% 33%)',
+                          }}
+                        />
                         {/* Red Top Bar */}
                         <div className="bg-rose-600 px-2.5 py-1.5 flex items-center gap-1.5 text-white shrink-0">
                           <div className="w-5 h-5 rounded bg-white flex items-center justify-center shrink-0">
