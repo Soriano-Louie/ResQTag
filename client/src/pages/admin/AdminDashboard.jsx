@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { adminService } from '../../services/adminService';
 import { tagOrderService } from '../../services/tagOrderService';
 import { useToast } from '../../context/ToastContext';
@@ -71,6 +71,7 @@ export default function AdminDashboard() {
   const [orderTotalPages, setOrderTotalPages] = useState(1);
   const [orderTotalOrders, setOrderTotalOrders] = useState(0);
   const [loadingOrders, setLoadingOrders] = useState(true);
+  const orderRequestId = useRef(0);
 
   // Payment Verification & Receipt Modal State
   const [viewingReceiptOrder, setViewingReceiptOrder] = useState(null);
@@ -120,6 +121,7 @@ export default function AdminDashboard() {
 
   // Load Orders Data
   const loadOrdersData = async () => {
+    const requestId = ++orderRequestId.current;
     try {
       setLoadingOrders(true);
       const res = await tagOrderService.getAdminOrders({
@@ -134,7 +136,9 @@ export default function AdminDashboard() {
         page: orderPage,
         limit: orderLimit
       });
+      if (requestId !== orderRequestId.current) return;
       setOrders(res.orders || []);
+      setSelectedOrderIds([]);
       setOrderCounts(res.counts || { 
         pendingCount: 0, 
         processingCount: 0, 
@@ -146,9 +150,12 @@ export default function AdminDashboard() {
       setOrderTotalPages(res.pagination.totalPages || 1);
       setOrderTotalOrders(res.pagination.totalOrders || 0);
     } catch (err) {
+      if (requestId !== orderRequestId.current) return;
+      setOrders([]);
+      setSelectedOrderIds([]);
       toast.error('Failed to load tag printing orders.');
     } finally {
-      setLoadingOrders(false);
+      if (requestId === orderRequestId.current) setLoadingOrders(false);
     }
   };
 
@@ -157,13 +164,21 @@ export default function AdminDashboard() {
   }, [userPage]);
 
   useEffect(() => {
-    loadOrdersData();
+    setLoadingOrders(true);
+    setSelectedOrderIds([]);
+    const timer = setTimeout(loadOrdersData, 250);
+    return () => {
+      clearTimeout(timer);
+      orderRequestId.current += 1;
+    };
   }, [
     orderPage, 
     orderLimit, 
     orderStatusFilter, 
     orderPaymentStatusFilter, 
     orderDeliveryTypeFilter, 
+    orderPaymentMethodFilter,
+    orderSearch,
     orderDateFilter, 
     orderStartDate, 
     orderEndDate
@@ -177,8 +192,8 @@ export default function AdminDashboard() {
 
   const handleOrderSearchSubmit = (e) => {
     e.preventDefault();
-    setOrderPage(1);
-    loadOrdersData();
+    if (orderPage !== 1) setOrderPage(1);
+    else loadOrdersData();
   };
 
   const handleToggleUserStatus = async (user) => {
@@ -681,12 +696,29 @@ export default function AdminDashboard() {
                 <input
                   type="text"
                   value={orderSearch}
-                  onChange={(e) => setOrderSearch(e.target.value)}
+                  onChange={(e) => {
+                    setOrderSearch(e.target.value);
+                    setOrderPage(1);
+                  }}
                   placeholder="Search recipient, email, phone, ref #..."
                   className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium text-slate-900"
                 />
               </form>
             </div>
+            {orderDateFilter === 'custom' && (
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                <label className="font-semibold text-slate-600">From
+                  <input type="date" value={orderStartDate} max={orderEndDate || undefined}
+                    onChange={e => { setOrderStartDate(e.target.value); setOrderPage(1); }}
+                    className="ml-2 px-3 py-2 border border-slate-200 rounded-xl bg-slate-50" />
+                </label>
+                <label className="font-semibold text-slate-600">To
+                  <input type="date" value={orderEndDate} min={orderStartDate || undefined}
+                    onChange={e => { setOrderEndDate(e.target.value); setOrderPage(1); }}
+                    className="ml-2 px-3 py-2 border border-slate-200 rounded-xl bg-slate-50" />
+                </label>
+              </div>
+            )}
           </div>
 
           {/* Batch Actions Toolbar */}
