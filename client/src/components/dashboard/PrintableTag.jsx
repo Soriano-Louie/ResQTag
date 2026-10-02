@@ -262,7 +262,7 @@ export default function PrintableTag({ qr, user, tagType = 'bundle', quantity = 
 
                       {/* ── Keychain BACK ── exact W × H cm ── */}
                       <div
-                        className="bg-white text-black flex flex-col items-center justify-between text-center overflow-hidden"
+                        className="bg-white text-black grid grid-rows-[1fr_auto_1fr] items-start justify-items-center text-center overflow-hidden"
                         style={{
                           width: `${w}cm`,
                           height: `${h}cm`,
@@ -288,7 +288,7 @@ export default function PrintableTag({ qr, user, tagType = 'bundle', quantity = 
 
                         {/* Feature bullets */}
                         <div
-                          className="rounded bg-slate-50 border border-slate-200 text-black text-left w-full shrink-0 font-medium"
+                          className="rounded bg-slate-50 border border-slate-200 text-black text-center w-full shrink-0 font-medium"
                           style={{ fontSize: isMini ? '4.5pt' : '5.2pt', padding: isMini ? '0.8mm' : '1.2mm', lineHeight: '1.3' }}
                         >
                           <p>• Scan QR for medical info</p>

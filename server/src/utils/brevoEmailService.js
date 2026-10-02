@@ -2,6 +2,7 @@ import { BrevoClient } from '@getbrevo/brevo';
 import QRCode from 'qrcode';
 import { config } from '../config/env.js';
 import { uploadImageBuffer } from './cloudinaryStorage.js';
+import { createDigitalTagKit } from './digitalTagKit.js';
 
 /**
  * Resolves the public frontend origin used for QR / profile links in emails.
@@ -89,6 +90,7 @@ export async function sendTagOrderEmail({
   totalPeso,
   recipientEmail,
   recipientName,
+  holderName,
   qrToken,
   tagType,
   selectedSize,
@@ -118,7 +120,7 @@ export async function sendTagOrderEmail({
     const origin = getPublicOrigin();
     const emergencyUrl = `${origin}/emergency/${qrToken}`;
     const tokenDisplay = `RQ-${qrToken.slice(0, 8).toUpperCase()}`;
-    const sizeLabel = formatTagSizeLabel(tagType, selectedSize, customDimensions);
+    const sizeLabel = tagType === 'bundle' ? 'Keychain + wallet card (dimensions printed in the PDF)' : formatTagSizeLabel(tagType, selectedSize, customDimensions);
     const tagFormatLabel = tagType === 'wallet_card' 
       ? 'Wallet / ID Card' 
       : tagType === 'bundle' 
@@ -132,7 +134,10 @@ export async function sendTagOrderEmail({
     const isCodPhysical = isPhysical && paymentMethod === 'cod';
 
     // Generate high-resolution QR code PNG buffer (1000x1000 px for ultra-crisp print quality)
-    const qrBuffer = await QRCode.toBuffer(emergencyUrl, {
+    const digitalKit = !isPhysical ? await createDigitalTagKit({
+      emergencyUrl, holderName: holderName || recipientName, tagType, selectedSize, customDimensions, orderId,
+    }) : null;
+    const qrBuffer = digitalKit?.qrBuffer || await QRCode.toBuffer(emergencyUrl, {
       errorCorrectionLevel: 'H',
       type: 'png',
       margin: 2,
@@ -384,7 +389,7 @@ export async function sendTagOrderEmail({
     <div class="body">
       <div class="greeting">Hello ${recipientName || 'Valued User'},</div>
       <div class="text">
-        Your GCash payment for Order <strong>#${orderId}</strong> has been successfully verified! Attached to this email is your high-resolution encrypted QR tag formatted specifically for your selected dimensions.
+        Your GCash payment for Order <strong>#${orderId}</strong> has been successfully verified! Your email includes two files: a <strong>ready-to-print PDF with your selected template's front and back</strong>, and a <strong>separate high-resolution QR PNG</strong> for your own designs.
       </div>
 
       <div class="card-qr">
@@ -413,7 +418,8 @@ export async function sendTagOrderEmail({
         <h3>🖨️ Self-Printing & Lamination Guide</h3>
         <ul>
           <li><strong>Photo Paper or Cardstock:</strong> For best longevity, print on 220-300 GSM photo paper or cardstock at 100% scale (Do not scale to fit).</li>
-          <li><strong>Dimensions:</strong> Use the exact dimensions in centimeters specified above for standard acrylic blanks or card slots.</li>
+          <li><strong>Printable PDF:</strong> Open the attached PDF and print at Actual size / 100%. Cut along the outlines and place the front and back together. The dimensions are printed in the PDF.</li>
+          <li><strong>Separate QR PNG:</strong> Use this image for your own design. Keep its white border, square proportions, and dark-on-white contrast.</li>
           <li><strong>Lamination:</strong> Cold or thermal lamination is recommended to make the printed emergency tag waterproof and scratch-resistant.</li>
         </ul>
       </div>
@@ -453,6 +459,10 @@ export async function sendTagOrderEmail({
       },
       to: [{ email: recipientEmail, name: recipientName || 'ResQTag User' }],
       attachment: [
+        ...(digitalKit ? [{
+          content: digitalKit.pdfBuffer.toString('base64'),
+          name: `ResQTag-${tokenDisplay}-printable.pdf`
+        }] : []),
         {
           content: qrBase64,
           name: `ResQTag-${tokenDisplay}.png`

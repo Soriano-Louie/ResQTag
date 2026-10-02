@@ -569,6 +569,7 @@ export async function confirmPaymentAndSendEmail(req, res) {
         totalPeso: order.total_peso,
         recipientEmail: destinationEmail,
         recipientName,
+        holderName: `${order.first_name} ${order.last_name}`.trim(),
         qrToken: order.qr_token,
         tagType: order.tag_type,
         selectedSize: order.selected_size,
