@@ -34,13 +34,14 @@ import { isValidEmail, ORDER_EMAIL_MAX_LENGTH } from '../../utils/validation';
 // wallet card (code 'standard_cr80_card', 8.56 × 5.4 cm). No other sizes are
 // offered for physical tags. `sets` = keychain+card pairs per purchase unit.
 const PHYSICAL_PACKAGES = [
-  { key: 'physical_combo', label: 'Single Combo', tagline: '1 keychain + 1 wallet card', pricePeso: 100, sets: 1 },
+  { key: 'physical_combo', label: 'Single Combo', tagline: '1 keychain + 1 wallet card', pricePeso: 80, sets: 1 },
   { key: 'physical_family_3', label: 'Family of 3', tagline: '3 keychains + 3 wallet cards', pricePeso: 210, sets: 3 },
   { key: 'physical_family_5', label: 'Family of 5', tagline: '5 keychains + 5 wallet cards', pricePeso: 350, sets: 5 },
   { key: 'physical_family_10', label: 'Family of 10', tagline: '10 keychains + 10 wallet cards', pricePeso: 700, sets: 10 }
 ];
 
 const getPhysicalPackage = (key) => PHYSICAL_PACKAGES.find((p) => p.key === key);
+const DIGITAL_PRICES = { keychain: 25, wallet_card: 40, bundle: 60 };
 
 const createInitialOrderForm = () => ({
     deliveryType: 'digital_email', // 'digital_email' | 'physical_shipping'
@@ -265,6 +266,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
   const physicalTotalPeso = selectedPhysicalPackage
     ? selectedPhysicalPackage.pricePeso * physicalBundleQty
     : 0;
+  const orderTotalPeso = isPhysicalDelivery ? physicalTotalPeso : DIGITAL_PRICES[formData.tagType] * formData.quantity;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -545,7 +547,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 <div>
                   <div className="flex items-center gap-1.5 mb-1 text-slate-900">
                     <Key className="w-3.5 h-3.5 text-brand-600" />
-                    <span className="font-black text-xs">Keychain</span>
+                    <span className="font-black text-xs">Keychain — ₱{DIGITAL_PRICES.keychain}</span>
                   </div>
                   <span className="text-[10px] text-slate-500 leading-tight block">
                     Keys, pet tags, bags
@@ -569,7 +571,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 <div>
                   <div className="flex items-center gap-1.5 mb-1 text-slate-900">
                     <CreditCard className="w-3.5 h-3.5 text-brand-600" />
-                    <span className="font-black text-xs">Wallet Card</span>
+                    <span className="font-black text-xs">Wallet Card — ₱{DIGITAL_PRICES.wallet_card}</span>
                   </div>
                   <span className="text-[10px] text-slate-500 leading-tight block">
                     Wallet slots, phone ID
@@ -593,7 +595,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                 <div>
                   <div className="flex items-center gap-1.5 mb-1 text-slate-900">
                     <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    <span className="font-black text-xs">Complete Kit</span>
+                    <span className="font-black text-xs">Complete Kit — ₱{DIGITAL_PRICES.bundle}</span>
                   </div>
                   <span className="text-[10px] text-slate-500 leading-tight block">
                     Keychain + Card (Both)
@@ -889,9 +891,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                     GCash Payment
                   </span>
                   <span className="text-xs font-bold text-blue-100">
-                    {isPhysicalDelivery
-                      ? `Amount to Pay: ₱${physicalTotalPeso}`
-                      : 'Send Payment to:'}
+                    {`Amount to Pay: ₱${orderTotalPeso}`}
                   </span>
                 </div>
                 <span className="text-[11px] font-bold text-blue-100">Official Merchant</span>
@@ -1077,7 +1077,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                     ? `Place Order — Cash on Delivery (₱${physicalTotalPeso})`
                     : isPhysicalDelivery
                       ? `Place Order — ₱${physicalTotalPeso}`
-                      : 'Submit Order & Payment'}
+                      : `Submit Order & Payment — ₱${orderTotalPeso}`}
                 </>
               )}
             </button>

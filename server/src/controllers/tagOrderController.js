@@ -18,7 +18,7 @@ import {
 // order is the TOTAL number of tag sets (= package.sets Ã— bundle multiplier),
 // so a Family of 5 Ã— 2 stores quantity = 10.
 const PHYSICAL_PACKAGES = {
-  physical_combo: { label: 'Single Combo', pricePeso: 100, sets: 1 },
+  physical_combo: { label: 'Single Combo', pricePeso: 80, sets: 1 },
   physical_family_3: { label: 'Family of 3', pricePeso: 210, sets: 3 },
   physical_family_5: { label: 'Family of 5', pricePeso: 350, sets: 5 },
   physical_family_10: { label: 'Family of 10', pricePeso: 700, sets: 10 }
@@ -133,6 +133,7 @@ export async function createOrder(req, res) {
     const physicalTotalPeso = physicalPackage
       ? physicalPackage.pricePeso * (qty / physicalPackage.sets)
       : null;
+    const totalPeso = physicalTotalPeso ?? ({ keychain: 25, wallet_card: 40, bundle: 60 }[chosenType] * qty);
 
     // Handle receipt upload from multer / Cloudinary
     let receiptUrl = null;
@@ -174,8 +175,8 @@ export async function createOrder(req, res) {
       `INSERT INTO tag_orders (
         user_id, delivery_type, payment_method, target_email, recipient_name, contact_number, 
         shipping_address, tag_type, selected_size, custom_dimensions, quantity, 
-        order_status, payment_status, gcash_receipt_url, gcash_ref_number, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
+        order_status, payment_status, gcash_receipt_url, gcash_ref_number, notes, total_peso
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
       [
         userId,
         chosenDeliveryType,
@@ -191,7 +192,8 @@ export async function createOrder(req, res) {
         initialPaymentStatus,
         receiptUrl,
         cleanRef,
-        cleanNotes
+        cleanNotes,
+        totalPeso
       ]
     );
 
@@ -213,7 +215,7 @@ export async function createOrder(req, res) {
       tagType: chosenType,
       selectedSize: selectedSize || 'standard',
       packageLabel: physicalPackage ? physicalPackage.label : null,
-      totalPeso: physicalTotalPeso,
+      totalPeso,
       status: 'pending',
       paymentStatus: initialPaymentStatus
     });

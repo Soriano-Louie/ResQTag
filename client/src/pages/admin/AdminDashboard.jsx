@@ -311,6 +311,7 @@ export default function AdminDashboard() {
 
   const getPhysicalPackagePrice = (order) => {
     if (!isPhysicalPackageOrder(order)) return null;
+    if (order.total_peso != null) return Number(order.total_peso);
     const quantity = parseInt(order.quantity, 10) || PHYSICAL_PACKAGE_SETS[order.selected_size];
     return PHYSICAL_PACKAGE_PRICES[order.selected_size] * (quantity / PHYSICAL_PACKAGE_SETS[order.selected_size]);
   };
