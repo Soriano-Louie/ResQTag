@@ -271,7 +271,7 @@ export default function PrintableTag({ qr, user, tagType = 'bundle', quantity = 
                         }}
                       >
                         {/* Name block */}
-                        <div className="shrink-0 w-full">
+                        <div className="shrink-0 w-full" style={{ transform: 'translateY(1mm)' }}>
                           <span
                             className="uppercase tracking-widest text-rose-700 font-black block leading-none"
                             style={{ fontSize: isMini ? '4.5pt' : '5.2pt' }}

@@ -35,13 +35,29 @@ function drawKeychain(doc, qr, name, x, y, w, h, back) {
   frame(doc, x, y, w, h);
   const pad = 3;
   if (!back) {
-    text(doc, 'ResQTag', x + pad, y + pad, w - pad * 2, 5.5, RED, 'center');
+    const brandRed = '#be123c';
+    const iconSize = 6.5;
+    const gap = 1.5;
+    doc.font('Helvetica-Bold').fontSize(5.5);
+    const redWidth = doc.widthOfString('ResQ');
+    const blackWidth = doc.widthOfString('Tag');
+    const brandX = x + (w - iconSize - gap - redWidth - blackWidth) / 2;
+    doc.save().translate(brandX, y + pad).scale(iconSize / 24)
+      .lineWidth(2).lineCap('round').lineJoin('round');
+    // Match the Lucide ShieldAlert outline used by the admin print template.
+    doc.path('M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z').stroke(brandRed);
+    doc.moveTo(12, 8).lineTo(12, 12).stroke(brandRed);
+    doc.circle(12, 16, 1).fill(brandRed);
+    doc.restore();
+    text(doc, 'ResQ', brandX + iconSize + gap, y + pad + 0.5, redWidth + 1, 5.5, brandRed);
+    text(doc, 'Tag', brandX + iconSize + gap + redWidth, y + pad + 0.5, blackWidth + 1, 5.5, '#000000');
     const size = Math.min(w - pad * 2, h - 22);
     doc.image(qr, x + (w - size) / 2, y + (h - size) / 2, { width: size, height: size });
     text(doc, 'SCAN IN EMERGENCY', x + pad, y + h - 9, w - pad * 2, 4.5, RED, 'center');
   } else {
-    text(doc, 'EMERGENCY ID', x + pad, y + pad, w - pad * 2, 4.5, RED, 'center');
-    text(doc, name, x + pad, y + 10, w - pad * 2, 6, INK, 'center');
+    const nameOffset = 0.1 * CM; // Move the heading and name down by 1 mm.
+    text(doc, 'EMERGENCY ID', x + pad, y + pad + nameOffset, w - pad * 2, 4.5, RED, 'center');
+    text(doc, name, x + pad, y + 10 + nameOffset, w - pad * 2, 6, INK, 'center');
     const boxHeight = 25;
     const top = y + (h - boxHeight) / 2;
     doc.roundedRect(x + pad, top, w - pad * 2, boxHeight, 2).fill('#f1f5f9');

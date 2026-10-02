@@ -42,6 +42,33 @@ const PHYSICAL_PACKAGES = [
 
 const getPhysicalPackage = (key) => PHYSICAL_PACKAGES.find((p) => p.key === key);
 
+const createInitialOrderForm = () => ({
+    deliveryType: 'digital_email', // 'digital_email' | 'physical_shipping'
+    paymentMethod: 'gcash', // 'gcash' | 'cod' (cod only for physical_shipping)
+    targetEmail: '',
+    recipientName: '',
+    contactNumber: '',
+    shippingAddress: '',
+    tagType: 'keychain', // 'keychain' | 'wallet_card' | 'bundle'
+    selectedSize: 'standard_keychain_30x50',
+    // Custom dimensions (width/height) for single-item custom size
+    customWidthCm: '',
+    customHeightCm: '',
+    // Bundle-specific size selections (for digital email complete kit)
+    bundleKeychainSize: 'square_fob_30x30',
+    bundleKeychainCustomWidth: '',
+    bundleKeychainCustomHeight: '',
+    bundleCardSize: 'standard_cr80_card',
+    bundleCardCustomWidth: '',
+    bundleCardCustomHeight: '',
+    quantity: 1,
+    // Bundle multiplier for physical family packages; the submitted quantity is
+    // derived on submit as package.sets × physicalQty (see handleSubmit).
+    physicalQty: 1,
+    gcashRefNumber: '',
+    notes: ''
+  });
+
 export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess }) {
   const toast = useToast();
   const fileInputRef = useRef(null);
@@ -70,32 +97,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
 
-  const [formData, setFormData] = useState({
-    deliveryType: 'digital_email', // 'digital_email' | 'physical_shipping'
-    paymentMethod: 'gcash', // 'gcash' | 'cod' (cod only for physical_shipping)
-    targetEmail: '',
-    recipientName: '',
-    contactNumber: '',
-    shippingAddress: '',
-    tagType: 'keychain', // 'keychain' | 'wallet_card' | 'bundle'
-    selectedSize: 'standard_keychain_30x50',
-    // Custom dimensions (width/height) for single-item custom size
-    customWidthCm: '',
-    customHeightCm: '',
-    // Bundle-specific size selections (for digital email complete kit)
-    bundleKeychainSize: 'square_fob_30x30',
-    bundleKeychainCustomWidth: '',
-    bundleKeychainCustomHeight: '',
-    bundleCardSize: 'standard_cr80_card',
-    bundleCardCustomWidth: '',
-    bundleCardCustomHeight: '',
-    quantity: 1,
-    // Bundle multiplier for physical family packages; the submitted quantity is
-    // derived on submit as package.sets × physicalQty (see handleSubmit).
-    physicalQty: 1,
-    gcashRefNumber: '',
-    notes: ''
-  });
+  const [formData, setFormData] = useState(createInitialOrderForm);
 
   // Autofill from user and profile data when modal opens
   useEffect(() => {
@@ -385,6 +387,12 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
 
       const res = await tagOrderService.createOrder(submissionData);
 
+      clearReceipt();
+      setFormData(createInitialOrderForm());
+      setMemberIds([]);
+      setIncludeSelf(false);
+      setCopiedGcash(false);
+      setFamilyError('');
       toast.success(res.message || 'ResQTag request submitted successfully!');
       if (onOrderSuccess) onOrderSuccess();
       onClose();
