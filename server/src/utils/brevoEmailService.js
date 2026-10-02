@@ -274,7 +274,11 @@ export async function sendTagOrderEmail({
 
       <div class="card-qr">
         <p style="font-size: 12px; font-weight: 700; color: #334155; margin: 0 0 12px;">Tag Preview & Instant Testing</p>
-        <img src="${qrImageSrc}" alt="ResQTag QR Code" class="qr-image" style="display:block;border:0;" />${qrImageNotice}
+        <table role="presentation" align="center" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+          <tr><td align="center">
+            <img src="${qrImageSrc}" alt="ResQTag QR Code" class="qr-image" style="display:block;border:0;margin:0 auto;" />
+          </td></tr>
+        </table>${qrImageNotice}
         <br />
         <div class="token-box">${tokenDisplay}</div>
         <p style="font-size: 11px; color: #64748b; margin: 8px 0 0;">Your live profile is already active and ready to be scanned</p>
@@ -382,7 +386,11 @@ export async function sendTagOrderEmail({
       </div>
 
       <div class="card-qr">
-        <img src="${qrImageSrc}" alt="ResQTag QR Code" class="qr-image" style="display:block;border:0;" />${qrImageNotice}
+        <table role="presentation" align="center" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+          <tr><td align="center">
+            <img src="${qrImageSrc}" alt="ResQTag QR Code" class="qr-image" style="display:block;border:0;margin:0 auto;" />
+          </td></tr>
+        </table>${qrImageNotice}
         <br />
         <div class="token-box">${tokenDisplay}</div>
         <p style="font-size: 11px; color: #64748b; margin: 8px 0 0;">Scan to immediately test your live emergency profile</p>
