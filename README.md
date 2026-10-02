@@ -72,12 +72,16 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
    - `DATABASE_URL`: Your Aiven MySQL Service URI
    - `NODE_ENV`: `production`
    - `CLIENT_URL`: Your deployed frontend URL (e.g. `https://resqtag.vercel.app`)
+   - `PUBLIC_SITE_URL`: Public HTTPS frontend origin for emailed QR images and PDFs. Defaults to `https://res-q-tag.vercel.app`, independently of the local `CLIENT_URL`; localhost destinations are rejected.
    - `JWT_SECRET`: A secure random secret string
 
 ### 3. Frontend Deployment (Vercel / Render / Netlify)
 1. Deploy `client/` directory with Build Command `npm run build` and Output Directory `dist`.
 2. Add Environment Variable:
    - `VITE_API_URL`: Your Render backend URL (e.g. `https://resqtag-api.onrender.com/api`)
+   - `VITE_PUBLIC_SITE_URL`: The same public frontend origin as `PUBLIC_SITE_URL`. Defaults to `https://res-q-tag.vercel.app` for displayed, downloaded, and printed QR tags, including when the admin opens the app locally. Rebuild the frontend after changing this value.
+
+Previously emailed or printed QR codes retain their encoded URL. Regenerate and resend/reprint tags that pointed to localhost after configuring these settings.
 
 ---
 

@@ -3,26 +3,15 @@ import QRCode from 'qrcode';
 import { config } from '../config/env.js';
 import { uploadImageBuffer } from './cloudinaryStorage.js';
 import { createDigitalTagKit } from './digitalTagKit.js';
+import { requirePublicSiteUrl } from './publicSiteUrl.js';
 
 /**
  * Resolves the public frontend origin used for QR / profile links in emails.
  *
- * Falls back to localhost only in development. In production a missing CLIENT_URL
- * would silently ship dead localhost links to real customers, so it is logged loudly.
+ * Refuse to send QR codes pointing to a development or private-network address.
  */
 function getPublicOrigin() {
-  const configured = (config.clientUrl || '').trim().replace(/\/+$/, '');
-
-  if (configured) return configured;
-
-  if (config.nodeEnv === 'production') {
-    console.error(
-      'CLIENT_URL is not set. Emails will contain broken localhost links. ' +
-      'Set CLIENT_URL to your deployed frontend origin (e.g. https://resqtag.vercel.app).'
-    );
-  }
-
-  return 'http://localhost:5173';
+  return requirePublicSiteUrl(config.publicSiteUrl);
 }
 
 /**

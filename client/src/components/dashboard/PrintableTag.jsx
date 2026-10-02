@@ -1,6 +1,7 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { ShieldAlert, Scissors } from 'lucide-react';
+import { getPublicSiteOrigin } from '../../utils/publicSiteUrl';
 
 /**
  * Parses and resolves tag dimensions into exact physical centimeters (cm)
@@ -88,7 +89,8 @@ export function resolveDimensions(tagType, selectedSize, customDimensions) {
 }
 
 export default function PrintableTag({ qr, user, tagType = 'bundle', quantity = 1, selectedSize, customDimensions, orderId, items }) {
-  const origin = window.location.origin;
+  const origin = getPublicSiteOrigin();
+  if (!origin) return <p role="alert">Set VITE_PUBLIC_SITE_URL to your hosted ResQTag website before printing QR tags.</p>;
 
   // Normalize single item or multiple items array
   let allTags = [];

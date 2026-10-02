@@ -5,6 +5,7 @@ import api from '../../services/api';
 import { Users, UserPlus, HeartHandshake } from 'lucide-react';
 import { RELATIONSHIPS } from '../../utils/relationships';
 import { BLOOD_TYPES } from '../../utils/bloodTypes';
+import { getPublicSiteOrigin } from '../../utils/publicSiteUrl';
 
 function RelationshipSelect({ value, onChange, className }) {
   return <select value={value || ''} onChange={onChange} className={className}>
@@ -18,6 +19,7 @@ const fields = ['contact_number', 'address', 'date_of_birth', 'blood_type', 'all
 const label = key => key.replaceAll('_', ' ');
 const empty = () => ({ first_name: '', last_name: '', relationship: '', profile: {}, contacts: [], privacy: { full_name: true, blood_type: true, allergies: true, important_medical_info: true, emergency_contacts: true } });
 export default function FamilyPage() {
+  const publicOrigin = getPublicSiteOrigin();
   const [members, setMembers] = useState([]);
   const [form, setForm] = useState(empty);
   const [busy, setBusy] = useState(false);
@@ -46,7 +48,7 @@ export default function FamilyPage() {
     {message && <p role="status" className="p-3 bg-amber-50 rounded-xl">{message}</p>}
     <div className="grid md:grid-cols-2 gap-4">{members.map(m => <article key={m.member_id} className="bg-white rounded-2xl border p-5 space-y-3">
       <h2 className="font-bold">{m.first_name} {m.last_name} {m.relationship && `(${m.relationship})`}</h2>
-      <QRCodeSVG value={`${window.location.origin}/emergency/${m.qr_token}`} size={96} />
+      {publicOrigin ? <QRCodeSVG value={`${publicOrigin}/emergency/${m.qr_token}`} size={96} /> : <p role="alert">Configure the hosted website URL to display QR codes.</p>}
       <div className="flex flex-wrap gap-3 text-sm font-semibold"><button disabled={busy} onClick={() => setForm(m)} className="text-brand-700">Edit details</button><a className="text-brand-700" href={`/emergency/${m.qr_token}`} target="_blank" rel="noreferrer">Preview emergency page</a><button disabled={busy} onClick={() => archive(m)} className="text-rose-700">Archive</button></div>
     </article>)}</div>
     <form onSubmit={save} className="bg-white border border-slate-100 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">

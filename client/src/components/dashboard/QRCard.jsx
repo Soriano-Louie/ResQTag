@@ -24,6 +24,7 @@ import { useToast } from '../../context/ToastContext';
 import OrderTagModal from './OrderTagModal';
 import PrintableTag from './PrintableTag';
 import ModalOverlay from '../common/ModalOverlay';
+import { getPublicSiteOrigin } from '../../utils/publicSiteUrl';
 
 export default function QRCard({ qr, user, onQRUpdated }) {
   const toast = useToast();
@@ -73,7 +74,8 @@ export default function QRCard({ qr, user, onQRUpdated }) {
     );
   }
 
-  const origin = window.location.origin;
+  const origin = getPublicSiteOrigin();
+  if (!origin) return <p role="alert">Set VITE_PUBLIC_SITE_URL to your hosted ResQTag website to display your QR code.</p>;
   const emergencyUrl = `${origin}/emergency/${qr.qr_token}`;
   const isActive = qr.status === 'active';
   const latestOrder = userOrders[0];
