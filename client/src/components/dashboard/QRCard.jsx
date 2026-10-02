@@ -323,9 +323,6 @@ export default function QRCard({ qr, user, onQRUpdated }) {
                     RQ-{qr.qr_token.slice(0, 8).toUpperCase()}
                   </h4>
                 </div>
-                <div className="px-2.5 py-1 rounded-xl bg-white/10 backdrop-blur-sm border border-white/10 text-[10px] font-bold text-slate-200">
-                  PHYSICAL KEYCHAIN TAG
-                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/10 text-xs">
