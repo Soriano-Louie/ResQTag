@@ -1,4 +1,5 @@
 import express from 'express';
+import { photoRouter } from './photoRoutes.js';
 import { randomBytes } from 'node:crypto';
 import pool from '../config/db.js';
 import { authenticate } from '../middleware/authMiddleware.js';
@@ -6,6 +7,7 @@ import { familySchema } from '../utils/familyValidation.js';
 
 const router = express.Router();
 router.use(authenticate);
+router.use('/:id/photo', photoRouter());
 export const decode = value => typeof value === 'string' ? JSON.parse(value) : value;
 router.get('/', async (req, res, next) => {
   try {

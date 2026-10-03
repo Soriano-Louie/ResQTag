@@ -1,9 +1,11 @@
 import pool from '../config/db.js';
+import { readPhoto } from '../utils/profilePhoto.js';
 import { filterPublicEmergencyProfile, DEFAULT_PRIVACY_FIELDS } from '../utils/privacyFilter.js';
 
 export async function getPublicEmergencyProfile(req, res) {
   try {
     const { token } = req.params;
+    res.set?.('Cache-Control', 'no-store');
 
     if (!token || typeof token !== 'string' || !/^[a-zA-Z0-9_-]{16,64}$/.test(token.trim())) {
       return res.status(400).json({ message: 'Invalid ResQTag emergency token format.' });
@@ -16,7 +18,8 @@ export async function getPublicEmergencyProfile(req, res) {
       if (m.archived || m.account_status !== 'active') return res.json({ status: 'inactive', message: 'This family tag is inactive.' });
       const decode = v => typeof v === 'string' ? JSON.parse(v) : v;
       const privacy = Object.fromEntries(Object.keys(DEFAULT_PRIVACY_FIELDS).map(key => [key, decode(m.privacy)?.[key] === true ? 1 : 0]));
-      return res.json({ status: 'active', data: filterPublicEmergencyProfile(m, decode(m.profile), decode(m.contacts), privacy) });
+      const profile = { ...decode(m.profile), profile_picture_url: privacy.profile_picture ? await readPhoto(m.user_id, m.member_id) : null };
+      return res.json({ status: 'active', data: filterPublicEmergencyProfile(m, profile, decode(m.contacts), privacy) });
     }
     // 1. Fetch QR Tag Record
     const [qrRows] = await pool.query(
@@ -96,6 +99,7 @@ export async function getPublicEmergencyProfile(req, res) {
     }
 
     // 8. CRITICAL SERVER-SIDE PRIVACY WHITELIST FILTER
+    profile.profile_picture_url = privacyMap.profile_picture ? await readPhoto(userId) : null;
     const sanitizedPublicData = filterPublicEmergencyProfile(user, profile, contacts, privacyMap);
 
     return res.json({

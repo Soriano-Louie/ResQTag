@@ -23,6 +23,7 @@ const PRIVACY_SECTIONS = [
     icon: User,
     color: 'text-purple-600 bg-purple-50',
     fields: [
+      { key: 'profile_picture', label: 'Profile Photo', desc: 'Show your optional photo to anyone scanning your tag; private by default', sensitive: true },
       { key: 'full_name', label: 'Full Name', desc: 'Allows first responders to address you and identify your profile', sensitive: false },
       { key: 'contact_number', label: 'Personal Phone Number', desc: 'Your direct mobile number', sensitive: true },
       { key: 'email', label: 'Personal Email Address', desc: 'Your personal account email', sensitive: true },

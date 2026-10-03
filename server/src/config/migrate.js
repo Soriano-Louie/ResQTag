@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
  */
 const REQUIRED_TABLES = [
   'family_members', 'tag_order_recipients',
+  'profile_photos',
   'users',
   'emergency_profiles',
   'emergency_contacts',
@@ -257,6 +258,13 @@ export async function runMigrations() {
       }
     });
 
+    await step('profile photos', () => connection.query(`CREATE TABLE IF NOT EXISTS profile_photos (
+      user_id INT NOT NULL,
+      member_id INT NOT NULL DEFAULT 0,
+      image MEDIUMBLOB NOT NULL,
+      PRIMARY KEY (user_id, member_id),
+      FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    )`));
     await step('family schema', () => connection.query(`CREATE TABLE IF NOT EXISTS family_members (
  member_id INT AUTO_INCREMENT PRIMARY KEY,
  user_id INT NOT NULL,

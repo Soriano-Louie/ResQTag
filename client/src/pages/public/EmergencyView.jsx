@@ -154,6 +154,7 @@ export default function EmergencyView() {
           </div>
         </div>
 
+        {data?.profile_picture_url && <img src={data.profile_picture_url} alt="Profile photo of the tag holder" className="w-32 h-32 mx-auto rounded-2xl object-cover border border-slate-200" />}
         {/* Priority 1: Emergency Contacts & Quick Dial */}
         {hasContacts && (
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">

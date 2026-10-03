@@ -12,6 +12,7 @@ import Home from './pages/public/Home';
 import About from './pages/public/About';
 import EmergencyView from './pages/public/EmergencyView';
 import PrivacyPolicy from './pages/public/PrivacyPolicy';
+import DataLeakPolicy from './pages/public/DataLeakPolicy';
 import Terms from './pages/public/Terms';
 
 // Auth Pages
@@ -46,6 +47,7 @@ export default function App() {
                 <Route path="/about" element={<About />} />
                 <Route path="/emergency/:token" element={<EmergencyView />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/zero-public-data-leak-policy" element={<DataLeakPolicy />} />
                 <Route path="/terms" element={<Terms />} />
                 
                 {/* Auth Routes */}

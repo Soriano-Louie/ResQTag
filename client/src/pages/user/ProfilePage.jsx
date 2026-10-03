@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ProfilePhotoUpload from '../../components/common/ProfilePhotoUpload';
 import { useNavigate } from 'react-router-dom';
 import { profileService } from '../../services/profileService';
 import { useToast } from '../../context/ToastContext';
@@ -93,6 +94,7 @@ export default function ProfilePage() {
 
       <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-sm">
         <form onSubmit={handleSubmit} className="space-y-5">
+          <ProfilePhotoUpload endpoint="/profile/photo" disabled={saving} />
           {/* Name Row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
