@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ProfilePhotoUpload from '../../components/common/ProfilePhotoUpload';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
@@ -22,6 +22,19 @@ export default function FamilyPage() {
   const [form, setForm] = useState(empty);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const detailsFormRef = useRef(null);
+  function editMember(member) {
+    setForm(member);
+    if (window.matchMedia('(max-width: 767px)').matches) {
+      requestAnimationFrame(() => {
+        detailsFormRef.current?.focus({ preventScroll: true });
+        detailsFormRef.current?.scrollIntoView({
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+          block: 'start'
+        });
+      });
+    }
+  }
   const load = async () => setMembers((await api.get('/family')).data.members);
   useEffect(() => { load().catch(err => setMessage(err.message)); }, []);
   async function save(e) {
@@ -47,9 +60,9 @@ export default function FamilyPage() {
     {message && <p role="status" className="p-3 bg-amber-50 rounded-xl">{message}</p>}
     <div className="grid md:grid-cols-2 gap-4">{members.map(m => <article key={m.member_id} className="bg-white rounded-2xl border p-5 space-y-3">
       <h2 className="font-bold">{m.first_name} {m.last_name} {m.relationship && `(${m.relationship})`}</h2>
-      <div className="flex flex-wrap gap-3 text-sm font-semibold"><button disabled={busy} onClick={() => setForm(m)} className="text-brand-700">Edit details</button><button disabled={busy} onClick={() => archive(m)} className="text-rose-700">Archive</button></div>
+      <div className="flex flex-wrap gap-3 text-sm font-semibold"><button disabled={busy} onClick={() => editMember(m)} className="text-brand-700">Edit details</button><button disabled={busy} onClick={() => archive(m)} className="text-rose-700">Archive</button></div>
     </article>)}</div>
-    <form onSubmit={save} className="bg-white border border-slate-100 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
+    <form ref={detailsFormRef} tabIndex={-1} aria-label={form.member_id ? 'Edit Family Member' : 'Add Family Member'} onSubmit={save} className="scroll-mt-20 bg-white border border-slate-100 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
       <div className="flex items-center gap-2.5 border-b border-slate-100 pb-4"><div className="p-2 rounded-xl bg-brand-50 text-brand-600"><UserPlus className="w-5 h-5" /></div><h2 className="font-bold text-slate-900">{form.member_id ? 'Edit Family Member' : 'Add Family Member'}</h2></div>
       {form.member_id ? <ProfilePhotoUpload key={form.member_id} endpoint={`/family/${form.member_id}/photo`} disabled={busy} family /> : <p className="text-sm text-slate-500">Save this family member, then select Edit details to add an optional profile photo.</p>}
       <div className="grid sm:grid-cols-2 gap-4">{['first_name', 'last_name'].map(key => <label key={key} className="block text-xs font-semibold text-slate-700 capitalize">{label(key)} <span className="text-rose-500">*</span><input className={input} required maxLength={50} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} /></label>)}<label className="block text-xs font-semibold text-slate-700">Relationship<RelationshipSelect className={input} value={form.relationship} onChange={e => setForm({ ...form, relationship: e.target.value })} /></label></div>
