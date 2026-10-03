@@ -33,3 +33,8 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Local promotional video files and tools
+/outputs/resqtag-promo/
+/.video-tools/
+/.voice-tools/
