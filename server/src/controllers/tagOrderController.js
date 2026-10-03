@@ -245,7 +245,7 @@ export async function getMyOrders(req, res) {
       [userId]
     );
 
-    await attachRecipients(pool, orders);
+    await attachRecipients(pool, orders, { includeQRTokens: false });
     return res.json({ orders: orders || [] });
   } catch (error) {
     console.error('getMyOrders error:', error);

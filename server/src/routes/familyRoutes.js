@@ -10,7 +10,7 @@ export const decode = value => typeof value === 'string' ? JSON.parse(value) : v
 router.get('/', async (req, res, next) => {
   try {
     const [members] = await pool.query('SELECT * FROM family_members WHERE user_id = ? AND archived = 0 ORDER BY member_id', [req.user.user_id]);
-    res.json({ members: members.map(m => ({ ...m, profile: decode(m.profile), contacts: decode(m.contacts), privacy: decode(m.privacy) })) });
+    res.json({ members: members.map(({ qr_token, ...m }) => ({ ...m, profile: decode(m.profile), contacts: decode(m.contacts), privacy: decode(m.privacy) })) });
   } catch (err) { next(err); }
 });
 async function save(req, res, next) {

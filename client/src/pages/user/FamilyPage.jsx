@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { QRCodeSVG } from 'qrcode.react';
 import api from '../../services/api';
 import { Users, UserPlus, HeartHandshake } from 'lucide-react';
 import { RELATIONSHIPS } from '../../utils/relationships';
 import { BLOOD_TYPES } from '../../utils/bloodTypes';
-import { getPublicSiteOrigin } from '../../utils/publicSiteUrl';
 
 function RelationshipSelect({ value, onChange, className }) {
   return <select value={value || ''} onChange={onChange} className={className}>
@@ -19,7 +17,6 @@ const fields = ['contact_number', 'address', 'date_of_birth', 'blood_type', 'all
 const label = key => key.replaceAll('_', ' ');
 const empty = () => ({ first_name: '', last_name: '', relationship: '', profile: {}, contacts: [], privacy: { full_name: true, blood_type: true, allergies: true, important_medical_info: true, emergency_contacts: true } });
 export default function FamilyPage() {
-  const publicOrigin = getPublicSiteOrigin();
   const [members, setMembers] = useState([]);
   const [form, setForm] = useState(empty);
   const [busy, setBusy] = useState(false);
@@ -45,11 +42,11 @@ export default function FamilyPage() {
     <Link to="/dashboard" className="text-brand-700">Back to dashboard</Link>
     <div className="flex items-center gap-3"><div className="p-3 rounded-2xl bg-brand-50 text-brand-600"><Users className="w-6 h-6" /></div><h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Family Members</h1></div>
     <p className="text-sm text-slate-500">Manage each person's emergency information, then choose who to include when ordering physical tags.</p>
+    <p role="note" className="rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-800">Family members' QR codes are provided on physical ResQTags and are not available to view, download, or print from your account. To get their tags, include them when placing a physical tag order.</p>
     {message && <p role="status" className="p-3 bg-amber-50 rounded-xl">{message}</p>}
     <div className="grid md:grid-cols-2 gap-4">{members.map(m => <article key={m.member_id} className="bg-white rounded-2xl border p-5 space-y-3">
       <h2 className="font-bold">{m.first_name} {m.last_name} {m.relationship && `(${m.relationship})`}</h2>
-      {publicOrigin ? <QRCodeSVG value={`${publicOrigin}/emergency/${m.qr_token}`} size={96} /> : <p role="alert">Configure the hosted website URL to display QR codes.</p>}
-      <div className="flex flex-wrap gap-3 text-sm font-semibold"><button disabled={busy} onClick={() => setForm(m)} className="text-brand-700">Edit details</button><a className="text-brand-700" href={`/emergency/${m.qr_token}`} target="_blank" rel="noreferrer">Preview emergency page</a><button disabled={busy} onClick={() => archive(m)} className="text-rose-700">Archive</button></div>
+      <div className="flex flex-wrap gap-3 text-sm font-semibold"><button disabled={busy} onClick={() => setForm(m)} className="text-brand-700">Edit details</button><button disabled={busy} onClick={() => archive(m)} className="text-rose-700">Archive</button></div>
     </article>)}</div>
     <form onSubmit={save} className="bg-white border border-slate-100 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
       <div className="flex items-center gap-2.5 border-b border-slate-100 pb-4"><div className="p-2 rounded-xl bg-brand-50 text-brand-600"><UserPlus className="w-5 h-5" /></div><h2 className="font-bold text-slate-900">{form.member_id ? 'Edit Family Member' : 'Add Family Member'}</h2></div>

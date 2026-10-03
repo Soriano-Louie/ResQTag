@@ -1,5 +1,7 @@
-export async function attachRecipients(db, orders) {
+export async function attachRecipients(db, orders, { includeQRTokens = true } = {}) {
   if (!orders.length) return;
   const [rows] = await db.query(`SELECT order_id, member_id, first_name, last_name, qr_token, copies FROM tag_order_recipients WHERE order_id IN (${orders.map(() => '?').join(',')}) ORDER BY recipient_id`, orders.map(o => o.order_id));
-  for (const order of orders) order.recipients = rows.filter(r => r.order_id === order.order_id);
+  for (const order of orders) order.recipients = rows
+    .filter(r => r.order_id === order.order_id)
+    .map(({ qr_token, ...recipient }) => includeQRTokens ? { ...recipient, qr_token } : recipient);
 }

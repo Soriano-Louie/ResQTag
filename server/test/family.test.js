@@ -2,12 +2,33 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validateBundle, familySchema } from '../src/utils/familyValidation.js';
 import pool from '../src/config/db.js';
-import { createOrder, getOrderPrintData } from '../src/controllers/tagOrderController.js';
+import { createOrder, getMyOrders, getOrderPrintData } from '../src/controllers/tagOrderController.js';
 import { getPublicEmergencyProfile } from '../src/controllers/publicController.js';
 import familyRoutes from '../src/routes/familyRoutes.js';
 
 const selection = { memberIds: [1, 2, 3], includeSelf: false, bundleQuantity: 2 };
 function response() { return { code: 200, status(n) { this.code = n; return this; }, json(data) { this.data = data; return this; } }; }
+test('family list preserves editable details without exposing QR tokens', async t => {
+  t.mock.method(pool, 'query', async (sql, values) => {
+    assert.deepEqual(values, [7]);
+    return [[{ member_id: 1, first_name: 'Child', qr_token: 'fm_secret', profile: '{"blood_type":"O+"}', contacts: '[]', privacy: '{}' }]];
+  });
+  const handler = familyRoutes.stack.find(layer => layer.route?.methods.get).route.stack[0].handle;
+  const res = response();
+  await handler({ user: { user_id: 7 } }, res, err => { throw err; });
+  assert.equal(res.data.members[0].qr_token, undefined);
+  assert.equal(res.data.members[0].profile.blood_type, 'O+');
+  assert.equal(res.data.members[0].member_id, 1);
+});
+test('user order history preserves recipients without exposing QR tokens', async t => {
+  t.mock.method(pool, 'query', async sql => sql.includes('FROM tag_order_recipients')
+    ? [[{ order_id: 99, member_id: 1, first_name: 'Child', qr_token: 'fm_secret', copies: 2 }]]
+    : [[{ order_id: 99 }]]);
+  const res = response();
+  await getMyOrders({ user: { user_id: 7 } }, res);
+  assert.equal(res.code, 200);
+  assert.deepEqual(res.data.orders[0].recipients, [{ order_id: 99, member_id: 1, first_name: 'Child', copies: 2 }]);
+});
 test('three selected people get two copies each; owner occupies one slot', () => {
   assert.equal(validateBundle(selection, 3).quantity, 2);
   assert.deepEqual(validateBundle({ ...selection, memberIds: '[1,2]', includeSelf: 'true' }, 3).members, [1, 2]);
