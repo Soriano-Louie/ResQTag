@@ -34,6 +34,9 @@ export default function Navbar() {
   };
 
   const isActive = (path) => location.pathname === path;
+  const mobileLinkClass = (path) => `flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${
+    isActive(path) ? 'bg-slate-800 text-white shadow-inner' : 'text-slate-300 hover:bg-slate-800'
+  }`;
 
   return (
     <nav className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-40 no-print">
@@ -183,7 +186,8 @@ export default function Navbar() {
           <Link
             to="/about"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-800"
+            aria-current={isActive('/about') ? 'page' : undefined}
+            className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${isActive('/about') ? 'text-brand-400 bg-slate-800 font-semibold' : 'text-slate-300 hover:bg-slate-800'}`}
           >
             How It Works
           </Link>
@@ -192,7 +196,8 @@ export default function Navbar() {
               <Link
                 to="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-800"
+                aria-current={isActive('/dashboard') ? 'page' : undefined}
+                className={mobileLinkClass('/dashboard')}
               >
                 <LayoutDashboard className="w-5 h-5 text-brand-400" />
                 Dashboard
@@ -201,9 +206,7 @@ export default function Navbar() {
                 to="/family"
                 onClick={() => setMobileMenuOpen(false)}
                 aria-current={isActive('/family') ? 'page' : undefined}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                  isActive('/family') ? 'bg-slate-800 text-white shadow-inner' : 'text-slate-300 hover:bg-slate-800'
-                }`}
+                className={mobileLinkClass('/family')}
               >
                 <Users className="w-5 h-5 text-brand-400" />
                 Family Members
@@ -211,7 +214,8 @@ export default function Navbar() {
               <Link
                 to="/qr"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-800"
+                aria-current={isActive('/qr') ? 'page' : undefined}
+                className={mobileLinkClass('/qr')}
               >
                 <QrCode className="w-5 h-5 text-emerald-400" />
                 My ResQTag
@@ -219,7 +223,8 @@ export default function Navbar() {
               <Link
                 to="/privacy"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-800"
+                aria-current={isActive('/privacy') ? 'page' : undefined}
+                className={mobileLinkClass('/privacy')}
               >
                 <Lock className="w-5 h-5 text-sky-400" />
                 Privacy Controls
@@ -227,7 +232,8 @@ export default function Navbar() {
               <Link
                 to="/account"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-800"
+                aria-current={isActive('/account') ? 'page' : undefined}
+                className={mobileLinkClass('/account')}
               >
                 <User className="w-5 h-5 text-purple-400" />
                 Account Settings
@@ -236,7 +242,8 @@ export default function Navbar() {
                 <Link
                   to="/admin"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-amber-400 hover:bg-amber-950/40"
+                  aria-current={isActive('/admin') ? 'page' : undefined}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${isActive('/admin') ? 'bg-amber-950/60 text-amber-300 border border-amber-500/30' : 'text-amber-400 hover:bg-amber-950/40'}`}
                 >
                   <ShieldCheck className="w-5 h-5" />
                   Admin Dashboard
@@ -260,14 +267,16 @@ export default function Navbar() {
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center py-2.5 rounded-xl text-slate-200 bg-slate-800 font-semibold"
+                aria-current={isActive('/login') ? 'page' : undefined}
+                className={`w-full text-center py-2.5 rounded-xl text-slate-200 bg-slate-800 font-semibold ${isActive('/login') ? 'ring-2 ring-brand-400' : ''}`}
               >
                 Log In
               </Link>
               <Link
                 to="/register"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center py-2.5 rounded-xl text-white bg-brand-600 font-semibold shadow"
+                aria-current={isActive('/register') ? 'page' : undefined}
+                className={`w-full text-center py-2.5 rounded-xl text-white bg-brand-600 font-semibold shadow ${isActive('/register') ? 'ring-2 ring-brand-400' : ''}`}
               >
                 Create ResQTag
               </Link>
