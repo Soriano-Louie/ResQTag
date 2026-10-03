@@ -42,7 +42,7 @@ export default function FamilyPage() {
     <Link to="/dashboard" className="text-brand-700">Back to dashboard</Link>
     <div className="flex items-center gap-3"><div className="p-3 rounded-2xl bg-brand-50 text-brand-600"><Users className="w-6 h-6" /></div><h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Family Members</h1></div>
     <p className="text-sm text-slate-500">Manage each person's emergency information, then choose who to include when ordering physical tags.</p>
-    <p role="note" className="rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-800">Family members' QR codes are available through physical ResQTag or digital QR orders. They are not displayed on this page. To receive their QR codes, include them when placing an order.</p>
+    <p role="note" className="rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-800">Family members' QR codes are provided on physical ResQTags and are not displayed on this page. To get their tags, include them when placing a physical tag order. Digital QR orders include only the account owner's QR code.</p>
     {message && <p role="status" className="p-3 bg-amber-50 rounded-xl">{message}</p>}
     <div className="grid md:grid-cols-2 gap-4">{members.map(m => <article key={m.member_id} className="bg-white rounded-2xl border p-5 space-y-3">
       <h2 className="font-bold">{m.first_name} {m.last_name} {m.relationship && `(${m.relationship})`}</h2>
