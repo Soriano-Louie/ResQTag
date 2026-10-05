@@ -22,6 +22,19 @@
 
 /* Custom Print Styles for ResQTag Physical Tag */
 @media print {
+  /* The order sheet is portalled to body, after the full-height app shell. */
+  body:has(> .order-print-modal) > :not(.order-print-modal) {
+    display: none !important;
+  }
+
+  html:has(.order-print-modal),
+  body:has(> .order-print-modal) {
+    display: block !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
   html, body {
     background: #ffffff !important;
     background-color: #ffffff !important;

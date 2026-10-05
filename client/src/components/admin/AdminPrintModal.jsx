@@ -108,7 +108,7 @@ export default function AdminPrintModal({ orderId, orderIds, onClose, onStatusUp
       isOpen
       onClose={onClose}
       onBackdropClick={false}
-      className="bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 print:static print:inset-auto print:bg-white print:p-0 print:m-0 print:overflow-visible print:z-auto print:block print:h-auto print:w-auto"
+      className="order-print-modal bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 print:static print:inset-auto print:bg-white print:p-0 print:m-0 print:overflow-visible print:z-auto print:block print:h-auto print:w-auto"
     >
       {/* Printable Sheet (Active on browser print dialog) */}
       {!loading && items.length > 0 && <PrintableTag items={items} />}

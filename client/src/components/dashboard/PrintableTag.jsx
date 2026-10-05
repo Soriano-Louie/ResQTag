@@ -202,9 +202,11 @@ export default function PrintableTag({ qr, user, tagType = 'bundle', quantity = 
                 // the printed dimensions and a four-module QR quiet zone intact.
                 const pixelsPerCm = 96 / 2.54;
                 const paddingPx = (isMini ? 0.1 : 0.15) * pixelsPerCm;
+                const brandHeightPx = (isMini ? 5.5 : 6.5) * 96 / 72;
+                const footerHeightPx = (isMini ? 4.5 : 5.5) * 96 / 72;
                 const qrPixelSize = Math.floor(Math.min(
-                  w * pixelsPerCm - paddingPx * 2 - 6,
-                  h * pixelsPerCm - paddingPx * 2 - (isMini ? 20 : 24) - 6
+                  w * pixelsPerCm - paddingPx * 2,
+                  h * pixelsPerCm - paddingPx * 2 - brandHeightPx - footerHeightPx - 4
                 ));
 
                 return (
@@ -246,7 +248,7 @@ export default function PrintableTag({ qr, user, tagType = 'bundle', quantity = 
                         </div>
 
                         {/* QR Code */}
-                        <div className="border border-slate-200 rounded bg-white shrink-0 p-0.5 flex items-center justify-center">
+                        <div className="bg-white shrink-0 flex items-center justify-center">
                           <QRCodeSVG value={emergencyUrl} size={qrPixelSize} level="H" includeMargin />
                         </div>
 
