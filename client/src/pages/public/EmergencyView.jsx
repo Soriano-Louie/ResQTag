@@ -29,6 +29,7 @@ export default function EmergencyView() {
   const [status, setStatus] = useState('active');
 
   useEffect(() => {
+    const controller = new AbortController();
     async function fetchEmergencyProfile() {
       if (!token) {
         setError('No emergency token provided.');
@@ -39,8 +40,9 @@ export default function EmergencyView() {
       try {
         setLoading(true);
         setError(null);
-        const res = await publicService.getEmergencyProfile(token);
+        const res = await publicService.getEmergencyProfile(token, { signal: controller.signal });
 
+        if (controller.signal.aborted) return;
         if (res.status === 'inactive') {
           setStatus('inactive');
         } else {
@@ -48,13 +50,15 @@ export default function EmergencyView() {
           setData(res.data);
         }
       } catch (err) {
+        if (controller.signal.aborted) return;
         setError(err.message || 'Unable to load emergency profile.');
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
 
     fetchEmergencyProfile();
+    return () => controller.abort();
   }, [token]);
 
   // 1. Loading State

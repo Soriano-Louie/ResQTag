@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const isEmergencyPage = /^\/emergency\/[^/]+\/?$/.test(useLocation().pathname);
   const [user, setUser] = useState(null);
   const [qr, setQr] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,8 +26,12 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
-    refreshUser();
-  }, []);
+    // Scanners do not need a session lookup; restore it when they leave this page.
+    if (!isEmergencyPage) {
+      setLoading(true);
+      refreshUser();
+    }
+  }, [isEmergencyPage]);
 
   const login = async (credentials) => {
     const data = await authService.login(credentials);

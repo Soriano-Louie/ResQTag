@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const rawBase = import.meta.env.VITE_API_URL || '';
-const normalizedBase = rawBase
+export const normalizedBase = rawBase
   ? (rawBase.endsWith('/api') ? rawBase : `${rawBase.replace(/\/+$/, '')}/api`)
   : '/api';
 

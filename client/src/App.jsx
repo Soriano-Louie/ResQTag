@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
@@ -8,29 +8,29 @@ import ScrollToTop from './components/common/ScrollToTop';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 
 // Public Pages
-import Home from './pages/public/Home';
-import About from './pages/public/About';
+const Home = lazy(() => import('./pages/public/Home'));
+const About = lazy(() => import('./pages/public/About'));
 import EmergencyView from './pages/public/EmergencyView';
-import PrivacyPolicy from './pages/public/PrivacyPolicy';
-import DataLeakPolicy from './pages/public/DataLeakPolicy';
-import Terms from './pages/public/Terms';
+const PrivacyPolicy = lazy(() => import('./pages/public/PrivacyPolicy'));
+const DataLeakPolicy = lazy(() => import('./pages/public/DataLeakPolicy'));
+const Terms = lazy(() => import('./pages/public/Terms'));
 
 // Auth Pages
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
 
 // Authenticated User Pages
-import Dashboard from './pages/user/Dashboard';
-import FamilyPage from './pages/user/FamilyPage';
-import ProfilePage from './pages/user/ProfilePage';
-import MedicalPage from './pages/user/MedicalPage';
-import ContactsPage from './pages/user/ContactsPage';
-import PrivacyPage from './pages/user/PrivacyPage';
-import QRPage from './pages/user/QRPage';
-import AccountSettings from './pages/user/AccountSettings';
+const Dashboard = lazy(() => import('./pages/user/Dashboard'));
+const FamilyPage = lazy(() => import('./pages/user/FamilyPage'));
+const ProfilePage = lazy(() => import('./pages/user/ProfilePage'));
+const MedicalPage = lazy(() => import('./pages/user/MedicalPage'));
+const ContactsPage = lazy(() => import('./pages/user/ContactsPage'));
+const PrivacyPage = lazy(() => import('./pages/user/PrivacyPage'));
+const QRPage = lazy(() => import('./pages/user/QRPage'));
+const AccountSettings = lazy(() => import('./pages/user/AccountSettings'));
 
 // Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard';
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 
 export default function App() {
   return (
@@ -41,6 +41,7 @@ export default function App() {
           <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-brand-500 selection:text-white">
             <Navbar />
             <main className="flex-1">
+              <Suspense fallback={<div role="status" className="p-6 text-center text-slate-500">Loading...</div>}>
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Home />} />
@@ -126,6 +127,7 @@ export default function App() {
                 {/* Fallback */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              </Suspense>
             </main>
             <Footer />
           </div>

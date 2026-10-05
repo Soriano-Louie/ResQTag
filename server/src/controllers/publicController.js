@@ -23,7 +23,15 @@ export async function getPublicEmergencyProfile(req, res) {
     }
     // 1. Fetch QR Tag Record
     const [qrRows] = await pool.query(
-      'SELECT qr_id, user_id, qr_token, status FROM qr_tags WHERE qr_token = ?',
+      `SELECT q.qr_id, q.user_id, q.qr_token, q.status,
+              u.first_name, u.middle_name, u.last_name, u.email, u.account_status,
+              p.contact_number, p.address, p.date_of_birth, p.blood_type,
+              p.allergies, p.medical_conditions, p.medications,
+              p.important_medical_info, p.emergency_notes
+       FROM qr_tags q
+       LEFT JOIN users u ON u.user_id = q.user_id
+       LEFT JOIN emergency_profiles p ON p.user_id = q.user_id
+       WHERE q.qr_token = ?`,
       [token.trim()]
     );
 
@@ -46,20 +54,15 @@ export async function getPublicEmergencyProfile(req, res) {
 
     const userId = qrRecord.user_id;
 
-    // 3. Check User Account Status
-    const [userRows] = await pool.query(
-      'SELECT user_id, first_name, middle_name, last_name, email, account_status FROM users WHERE user_id = ?',
-      [userId]
-    );
-
-    if (userRows.length === 0 || userRows[0].account_status !== 'active') {
+    // Tag, account and profile are retrieved in one indexed lookup.
+    if (qrRecord.account_status !== 'active') {
       return res.status(200).json({
         status: 'inactive',
         message: 'This ResQTag account is currently inactive.'
       });
     }
-
-    const user = userRows[0];
+    const user = qrRecord;
+    const profile = { ...qrRecord };
 
     // 4. Update scan analytics in the background
     pool.query(
@@ -67,31 +70,19 @@ export async function getPublicEmergencyProfile(req, res) {
       [qrRecord.qr_id]
     ).catch(err => console.error('Scan metric update error:', err));
 
-    // 5. Fetch Profile
-    const [profileRows] = await pool.query(
-      `SELECT contact_number, address, date_of_birth, blood_type, 
-              allergies, medical_conditions, medications, important_medical_info, 
-              emergency_notes, profile_picture_url 
-       FROM emergency_profiles WHERE user_id = ?`,
-      [userId]
-    );
-
-    const profile = profileRows[0] || {};
-
-    // 6. Fetch Emergency Contacts
-    const [contacts] = await pool.query(
-      `SELECT contact_id, name, relationship, contact_number, email, is_public 
-       FROM emergency_contacts 
-       WHERE user_id = ? 
-       ORDER BY priority_order ASC, created_at ASC`,
-      [userId]
-    );
-
-    // 7. Fetch Privacy Settings
-    const [privacyRows] = await pool.query(
-      'SELECT field_name, is_public FROM privacy_settings WHERE user_id = ?',
-      [userId]
-    );
+    // Independent reads share one wait instead of two sequential round trips.
+    const [[contacts], [privacyRows]] = await Promise.all([
+      pool.query(
+        `SELECT contact_id, name, relationship, contact_number, email, is_public
+         FROM emergency_contacts WHERE user_id = ?
+         ORDER BY priority_order ASC, created_at ASC`,
+        [userId]
+      ),
+      pool.query(
+        'SELECT field_name, is_public FROM privacy_settings WHERE user_id = ?',
+        [userId]
+      )
+    ]);
 
     const privacyMap = { ...DEFAULT_PRIVACY_FIELDS };
     for (const row of privacyRows) {
