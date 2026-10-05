@@ -74,8 +74,10 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
   const toast = useToast();
   const fileInputRef = useRef(null);
   const [members, setMembers] = useState([]);
-  const [memberIds, setMemberIds] = useState([]);
-  const [includeSelf, setIncludeSelf] = useState(false);
+  const [familyMemberIds, setMemberIds] = useState([]);
+  const [familyIncludeSelf, setIncludeSelf] = useState(false);
+  // Single combos always have one recipient; null means the account owner.
+  const [singleRecipientId, setSingleRecipientId] = useState(null);
   const [familyError, setFamilyError] = useState('');
   const [familyLoading, setFamilyLoading] = useState(true);
   useEffect(() => {
@@ -87,6 +89,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
       if (!active) return;
       setMembers(data.members);
       setMemberIds(ids => ids.filter(id => data.members.some(m => m.member_id === id)));
+      setSingleRecipientId(id => data.members.some(m => m.member_id === id) ? id : null);
     }).catch(err => { if (active) setFamilyError(err.message); })
       .finally(() => { if (active) setFamilyLoading(false); });
     return () => { active = false; };
@@ -257,6 +260,9 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
   const isCashOnDelivery = isPhysicalDelivery && formData.paymentMethod === 'cod';
 
   const selectedPhysicalPackage = getPhysicalPackage(formData.selectedSize);
+  const isSingleCombo = isPhysicalDelivery && selectedPhysicalPackage?.sets === 1;
+  const memberIds = isSingleCombo ? (singleRecipientId === null ? [] : [singleRecipientId]) : familyMemberIds;
+  const includeSelf = isSingleCombo ? singleRecipientId === null : familyIncludeSelf;
   const availablePeople = members.length + 1;
   const missingPeople = Math.max(0, (selectedPhysicalPackage?.sets || 0) - availablePeople);
   const physicalBundleQty = formData.physicalQty || 1;
@@ -393,6 +399,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
       setFormData(createInitialOrderForm());
       setMemberIds([]);
       setIncludeSelf(false);
+      setSingleRecipientId(null);
       setCopiedGcash(false);
       setFamilyError('');
       toast.success(res.message || 'ResQTag request submitted successfully!');
@@ -668,11 +675,12 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
               </p>
 
               <fieldset className="p-4 border rounded-xl space-y-3">
-                <legend className="font-bold">Choose people for this package</legend>
+                <legend className="font-bold">{isSingleCombo ? 'Who is this combo for?' : 'Choose people for this package'}</legend>
+                {isSingleCombo && <p>Your combo is for you by default. Select one family member below to order for them instead.</p>}
                 <p role="status">{memberIds.length + Number(includeSelf)} of {selectedPhysicalPackage?.sets} people selected</p>
                 {familyError && <p role="alert" className="text-rose-700">{familyError} Close and reopen to retry.</p>}
-                <label className="block"><input type="checkbox" checked={includeSelf} onChange={e => setIncludeSelf(e.target.checked)} /> Include my own tag (one slot)</label>
-                {members.map(m => <label className="block" key={m.member_id}><input type="checkbox" checked={memberIds.includes(m.member_id)} onChange={e => setMemberIds(ids => e.target.checked ? [...ids, m.member_id] : ids.filter(id => id !== m.member_id))} /> {m.first_name} {m.last_name}</label>)}
+                <label className="block"><input type={isSingleCombo ? 'radio' : 'checkbox'} name={isSingleCombo ? 'singleComboRecipient' : undefined} checked={includeSelf} onChange={e => isSingleCombo ? setSingleRecipientId(null) : setIncludeSelf(e.target.checked)} /> {isSingleCombo ? 'Myself (account owner)' : 'Include my own tag (one slot)'}</label>
+                {members.map(m => <label className="block" key={m.member_id}><input type={isSingleCombo ? 'radio' : 'checkbox'} name={isSingleCombo ? 'singleComboRecipient' : undefined} checked={memberIds.includes(m.member_id)} onChange={e => isSingleCombo ? setSingleRecipientId(m.member_id) : setMemberIds(ids => e.target.checked ? [...ids, m.member_id] : ids.filter(id => id !== m.member_id))} /> {m.first_name} {m.last_name}</label>)}
                 <Link to="/family" onClick={onClose} className="text-brand-700 underline">Add or edit family members</Link>
                 <p>{physicalBundleQty} set(s) per selected person. Each set includes one keychain and one wallet card.</p>
                 <p className="font-semibold">{[...(includeSelf ? ['My own tag'] : []), ...members.filter(m => memberIds.includes(m.member_id)).map(m => `${m.first_name} ${m.last_name}`)].join(', ') || 'Choose your recipients above.'}</p>
