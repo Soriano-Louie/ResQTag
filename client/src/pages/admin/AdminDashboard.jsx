@@ -86,6 +86,8 @@ export default function AdminDashboard() {
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
   const [batchStatusValue, setBatchStatusValue] = useState('processing');
   const [batchUpdating, setBatchUpdating] = useState(false);
+  const selectedOnPage = orders.filter(order => selectedOrderIds.includes(order.order_id)).length;
+  const allOnPageSelected = orders.length > 0 && selectedOnPage === orders.length;
 
   // Helper for numbered pagination buttons with windowing
   const getPageNumbers = (currentPage, totalPages) => {
@@ -138,7 +140,6 @@ export default function AdminDashboard() {
       });
       if (requestId !== orderRequestId.current) return;
       setOrders(res.orders || []);
-      setSelectedOrderIds([]);
       setOrderCounts(res.counts || { 
         pendingCount: 0, 
         processingCount: 0, 
@@ -152,7 +153,6 @@ export default function AdminDashboard() {
     } catch (err) {
       if (requestId !== orderRequestId.current) return;
       setOrders([]);
-      setSelectedOrderIds([]);
       toast.error('Failed to load tag printing orders.');
     } finally {
       if (requestId === orderRequestId.current) setLoadingOrders(false);
@@ -165,7 +165,6 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setLoadingOrders(true);
-    setSelectedOrderIds([]);
     const timer = setTimeout(loadOrdersData, 250);
     return () => {
       clearTimeout(timer);
@@ -183,6 +182,12 @@ export default function AdminDashboard() {
     orderStartDate, 
     orderEndDate
   ]);
+
+  // Keep selections across pagination and refreshes, but reset for a new search.
+  useEffect(() => {
+    setSelectedOrderIds([]);
+  }, [orderStatusFilter, orderPaymentStatusFilter, orderDeliveryTypeFilter,
+    orderPaymentMethodFilter, orderSearch, orderDateFilter, orderStartDate, orderEndDate]);
 
   const handleUserSearchSubmit = (e) => {
     e.preventDefault();
@@ -449,6 +454,7 @@ export default function AdminDashboard() {
       {selectedPrintOrderIds && (
         <AdminPrintModal
           orderIds={selectedPrintOrderIds}
+          onStatusUpdated={() => setSelectedOrderIds(ids => ids.filter(id => !selectedPrintOrderIds.includes(id)))}
           onClose={() => {
             setSelectedPrintOrderIds(null);
             loadOrdersData();
@@ -729,6 +735,9 @@ export default function AdminDashboard() {
                 <span className="w-2.5 h-2.5 rounded-full bg-brand-500 animate-pulse" />
                 <span className="font-bold text-white">
                   {selectedOrderIds.length} {selectedOrderIds.length === 1 ? 'Order' : 'Orders'} Selected
+                  {!loadingOrders && selectedOrderIds.length > selectedOnPage && (
+                    <span className="ml-2 text-slate-300 font-normal">({selectedOrderIds.length - selectedOnPage} on other pages)</span>
+                  )}
                 </span>
                 <button
                   onClick={() => setSelectedOrderIds([])}
@@ -791,16 +800,17 @@ export default function AdminDashboard() {
                     <th className="p-4 w-10">
                       <input
                         type="checkbox"
-                        checked={orders.length > 0 && selectedOrderIds.length === orders.length}
+                        checked={allOnPageSelected}
+                        ref={input => { if (input) input.indeterminate = selectedOnPage > 0 && !allOnPageSelected; }}
                         onChange={() => {
-                          if (selectedOrderIds.length === orders.length) {
-                            setSelectedOrderIds([]);
-                          } else {
-                            setSelectedOrderIds(orders.map((o) => o.order_id));
-                          }
+                          const pageIds = orders.map(order => order.order_id);
+                          setSelectedOrderIds(ids => allOnPageSelected
+                            ? ids.filter(id => !pageIds.includes(id))
+                            : [...new Set([...ids, ...pageIds])]);
                         }}
                         className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer w-4 h-4"
-                        title="Select All Orders"
+                        title="Select all orders on this page"
+                        aria-label="Select all orders on this page"
                       />
                     </th>
                     <th className="p-4">Order ID</th>
@@ -828,6 +838,7 @@ export default function AdminDashboard() {
                         <td className="p-4 w-10">
                           <input
                             type="checkbox"
+                            aria-label={`Select order ${order.order_id}`}
                             checked={selectedOrderIds.includes(order.order_id)}
                             onChange={() => {
                               setSelectedOrderIds((prev) =>
