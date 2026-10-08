@@ -10,15 +10,12 @@ import {
 // ==========================================
 // PHYSICAL TAG PACKAGES
 // ==========================================
-// Every physical order is a fixed combo package that ALWAYS includes BOTH the
-// square keychain (code 'square_fob_30x30', 3.0 Ã— 3.0 cm) and the standard
-// CR80 wallet card (code 'standard_cr80_card', 8.56 Ã— 5.4 cm) â€” no other sizes
-// are offered for physical tags. `sets` is how many keychain+card pairs one
-// purchase unit contains and `pricePeso` is that unit's price. `quantity` on an
-// order is the TOTAL number of tag sets (= package.sets Ã— bundle multiplier),
-// so a Family of 5 Ã— 2 stores quantity = 10.
+// Physical singles offer either item or both. Family packages include both.
+// `sets` counts recipients; quantity is sets times the requested number of copies.
 const PHYSICAL_PACKAGES = {
-  physical_combo: { label: 'Single Combo', pricePeso: 80, sets: 1 },
+  physical_keychain: { label: 'Keychain Only', pricePeso: 30, sets: 1, tagType: 'keychain' },
+  physical_card: { label: 'Wallet Card Only', pricePeso: 50, sets: 1, tagType: 'wallet_card' },
+  physical_combo: { label: 'Keychain + Wallet Card', pricePeso: 70, sets: 1, tagType: 'bundle' },
   physical_family_3: { label: 'Family of 3', pricePeso: 210, sets: 3 },
   physical_family_5: { label: 'Family of 5', pricePeso: 350, sets: 5 },
   physical_family_10: { label: 'Family of 10', pricePeso: 700, sets: 10 }
@@ -93,21 +90,20 @@ export async function createOrder(req, res) {
 
     const validTagTypes = ['keychain', 'wallet_card', 'bundle'];
 
-    // Physical orders are fixed combo packages: always tag_type='bundle' and
-    // selected_size must be a known package key (see PHYSICAL_PACKAGES above).
+    // Physical format and price are determined by the selected package on the server.
     // Digital orders keep the existing free tag-type selection.
     let physicalPackage = null;
     if (chosenDeliveryType === 'physical_shipping') {
-      physicalPackage = PHYSICAL_PACKAGES[selectedSize];
+      physicalPackage = Object.hasOwn(PHYSICAL_PACKAGES, selectedSize) ? PHYSICAL_PACKAGES[selectedSize] : null;
       if (!physicalPackage) {
         return res.status(400).json({
-          message: 'Please select a valid physical package (combo or family bundle).'
+          message: 'Please select a valid physical tag or family package.'
         });
       }
     }
 
     const chosenType = chosenDeliveryType === 'physical_shipping'
-      ? 'bundle' // Combo: keychain + wallet card are always both included
+      ? (physicalPackage.tagType || 'bundle')
       : (validTagTypes.includes(tagType) ? tagType : 'keychain');
 
     let selection = null;

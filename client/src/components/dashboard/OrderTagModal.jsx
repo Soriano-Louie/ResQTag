@@ -29,12 +29,12 @@ import api from '../../services/api';
 import { Link } from 'react-router-dom';
 import { isValidEmail, ORDER_EMAIL_MAX_LENGTH } from '../../utils/validation';
 
-// Physical tag packages — each unit ALWAYS includes BOTH the fixed-size square
-// keychain (code 'square_fob_30x30', 3.0 × 3.0 cm) and the standard CR80
-// wallet card (code 'standard_cr80_card', 8.56 × 5.4 cm). No other sizes are
-// offered for physical tags. `sets` = keychain+card pairs per purchase unit.
+// Fixed-size physical items. Single-person options support the owner or one member;
+// family packages include a keychain and card for each selected person.
 const PHYSICAL_PACKAGES = [
-  { key: 'physical_combo', label: 'Single Combo', tagline: '1 keychain + 1 wallet card', pricePeso: 80, sets: 1 },
+  { key: 'physical_keychain', label: 'Keychain Only', tagline: '1 square keychain', pricePeso: 30, sets: 1, tagType: 'keychain' },
+  { key: 'physical_card', label: 'Wallet Card Only', tagline: '1 wallet card', pricePeso: 50, sets: 1, tagType: 'wallet_card' },
+  { key: 'physical_combo', label: 'Keychain + Wallet Card', tagline: '1 keychain + 1 wallet card', pricePeso: 70, sets: 1, tagType: 'bundle' },
   { key: 'physical_family_3', label: 'Family of 3', tagline: '3 keychains + 3 wallet cards', pricePeso: 210, sets: 3 },
   { key: 'physical_family_5', label: 'Family of 5', tagline: '5 keychains + 5 wallet cards', pricePeso: 350, sets: 5 },
   { key: 'physical_family_10', label: 'Family of 10', tagline: '10 keychains + 10 wallet cards', pricePeso: 700, sets: 10 }
@@ -76,7 +76,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
   const [members, setMembers] = useState([]);
   const [familyMemberIds, setMemberIds] = useState([]);
   const [familyIncludeSelf, setIncludeSelf] = useState(false);
-  // Single combos always have one recipient; null means the account owner.
+  // Single-person orders always have one recipient; null means the account owner.
   const [singleRecipientId, setSingleRecipientId] = useState(null);
   const [familyError, setFamilyError] = useState('');
   const [familyLoading, setFamilyLoading] = useState(true);
@@ -156,8 +156,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
 
     setFormData(prev => {
       if (type === 'physical_shipping') {
-        // Physical orders are fixed combo packages (keychain + card). Start at
-        // the default Single Combo until the user picks a package below.
+        // Start with both items; the customer can choose either item below.
         return {
           ...prev,
           deliveryType: type,
@@ -212,7 +211,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
   const handleTagTypeChange = (newType) => {
     let defaultSize = 'standard';
     if (formData.deliveryType === 'physical_shipping') {
-      // Physical orders are always the fixed combo kit.
+      // Default physical format includes both items.
       defaultSize = 'physical_combo';
     } else {
       if (newType === 'keychain') defaultSize = 'standard_keychain_30x50';
@@ -238,6 +237,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
     setFormData(prev => ({
       ...prev,
       selectedSize: key,
+      tagType: getPhysicalPackage(key)?.tagType || 'bundle',
       physicalQty: 1
     }));
   };
@@ -260,9 +260,9 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
   const isCashOnDelivery = isPhysicalDelivery && formData.paymentMethod === 'cod';
 
   const selectedPhysicalPackage = getPhysicalPackage(formData.selectedSize);
-  const isSingleCombo = isPhysicalDelivery && selectedPhysicalPackage?.sets === 1;
-  const memberIds = isSingleCombo ? (singleRecipientId === null ? [] : [singleRecipientId]) : familyMemberIds;
-  const includeSelf = isSingleCombo ? singleRecipientId === null : familyIncludeSelf;
+  const isSinglePersonOrder = isPhysicalDelivery && selectedPhysicalPackage?.sets === 1;
+  const memberIds = isSinglePersonOrder ? (singleRecipientId === null ? [] : [singleRecipientId]) : familyMemberIds;
+  const includeSelf = isSinglePersonOrder ? singleRecipientId === null : familyIncludeSelf;
   const availablePeople = members.length + 1;
   const missingPeople = Math.max(0, (selectedPhysicalPackage?.sets || 0) - availablePeople);
   const physicalBundleQty = formData.physicalQty || 1;
@@ -331,7 +331,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
       return toast.error('Please enter the complete delivery address.');
     }
     if (isPhysicalDelivery && !selectedPhysicalPackage) {
-      return toast.error('Please choose a physical package (combo or family bundle).');
+      return toast.error('Please choose a physical tag or family package.');
     }
     if (isPhysicalDelivery && (physicalTotalSets < 1 || physicalTotalSets > 20)) {
       return toast.error('Total tag sets must be between 1 and 20.');
@@ -363,7 +363,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
       submissionData.append('recipientName', formData.recipientName.trim());
       submissionData.append('contactNumber', formData.contactNumber.trim());
       submissionData.append('shippingAddress', formData.shippingAddress.trim());
-      submissionData.append('tagType', formData.tagType);
+      submissionData.append('tagType', isPhysicalDelivery ? (selectedPhysicalPackage.tagType || 'bundle') : formData.tagType);
       submissionData.append('selectedSize', formData.selectedSize);
       if (formData.deliveryType === 'digital_email' && formData.tagType !== 'bundle' && formData.selectedSize === 'custom') {
         submissionData.append('customDimensions', `${formData.customWidthCm}cm × ${formData.customHeightCm}cm`);
@@ -504,7 +504,7 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
                   )}
                 </div>
                 <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-                  Official printed &amp; laminated <strong>combo kit (keychain + wallet card)</strong> in fixed standard sizes, delivered to your address. Pay via GCash or cash on delivery.
+                  Official printed &amp; laminated <strong>keychain, wallet card, or both</strong> in fixed standard sizes, delivered to your address. Pay via GCash or cash on delivery.
                 </p>
               </button>
 
@@ -525,12 +525,12 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
               <>
                 <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
                   <span>2. Tag Format</span>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Fixed Combo</span>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Standard Sizes</span>
                 </label>
                 <div className="p-3 rounded-2xl bg-brand-50/40 border border-brand-300 flex items-start gap-2">
                   <Sparkles className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
                   <p className="text-[11px] text-slate-700 leading-relaxed">
-                    <strong>Keychain + Wallet Card</strong> — both are always included in every physical package, in fixed standard sizes: <strong>Square Keychain (3.0 × 3.0 cm)</strong> and <strong>Standard Wallet Card (CR80: 8.56 × 5.40 cm)</strong>.
+                    <strong>Choose a keychain, wallet card, or both</strong> for one person. Family packages include both for each person. Fixed sizes: <strong>Square Keychain (3.0 × 3.0 cm)</strong> and <strong>Standard Wallet Card (CR80: 8.56 × 5.40 cm)</strong>.
                   </p>
                 </div>
               </>
@@ -671,27 +671,27 @@ export default function OrderTagModal({ isOpen, onClose, user, onOrderSuccess })
               )}
 
               <p className="text-[11px] text-slate-500 leading-relaxed">
-                Every physical package is manufactured at fixed standard sizes — <strong>Square Keychain (3.0 × 3.0 cm)</strong> + <strong>Wallet Card (CR80: 8.56 × 5.4 cm)</strong>. No other sizes are offered for physical tags.
+                Physical tags use fixed standard sizes — <strong>Square Keychain (3.0 × 3.0 cm)</strong> + <strong>Wallet Card (CR80: 8.56 × 5.4 cm)</strong>. No other sizes are offered for physical tags.
               </p>
 
               <fieldset className="p-4 border rounded-xl space-y-3">
-                <legend className="font-bold">{isSingleCombo ? 'Who is this combo for?' : 'Choose people for this package'}</legend>
-                {isSingleCombo && <p>Your combo is for you by default. Select one family member below to order for them instead.</p>}
+                <legend className="font-bold">{isSinglePersonOrder ? 'Who is this order for?' : 'Choose people for this package'}</legend>
+                {isSinglePersonOrder && <p>Your order is for you by default. Select one family member below to order for them instead.</p>}
                 <p role="status">{memberIds.length + Number(includeSelf)} of {selectedPhysicalPackage?.sets} people selected</p>
                 {familyError && <p role="alert" className="text-rose-700">{familyError} Close and reopen to retry.</p>}
-                <label className="block"><input type={isSingleCombo ? 'radio' : 'checkbox'} name={isSingleCombo ? 'singleComboRecipient' : undefined} checked={includeSelf} onChange={e => isSingleCombo ? setSingleRecipientId(null) : setIncludeSelf(e.target.checked)} /> {isSingleCombo ? 'Myself (account owner)' : 'Include my own tag (one slot)'}</label>
-                {members.map(m => <label className="block" key={m.member_id}><input type={isSingleCombo ? 'radio' : 'checkbox'} name={isSingleCombo ? 'singleComboRecipient' : undefined} checked={memberIds.includes(m.member_id)} onChange={e => isSingleCombo ? setSingleRecipientId(m.member_id) : setMemberIds(ids => e.target.checked ? [...ids, m.member_id] : ids.filter(id => id !== m.member_id))} /> {m.first_name} {m.last_name}</label>)}
+                <label className="block"><input type={isSinglePersonOrder ? 'radio' : 'checkbox'} name={isSinglePersonOrder ? 'singleOrderRecipient' : undefined} checked={includeSelf} onChange={e => isSinglePersonOrder ? setSingleRecipientId(null) : setIncludeSelf(e.target.checked)} /> {isSinglePersonOrder ? 'Myself (account owner)' : 'Include my own tag (one slot)'}</label>
+                {members.map(m => <label className="block" key={m.member_id}><input type={isSinglePersonOrder ? 'radio' : 'checkbox'} name={isSinglePersonOrder ? 'singleOrderRecipient' : undefined} checked={memberIds.includes(m.member_id)} onChange={e => isSinglePersonOrder ? setSingleRecipientId(m.member_id) : setMemberIds(ids => e.target.checked ? [...ids, m.member_id] : ids.filter(id => id !== m.member_id))} /> {m.first_name} {m.last_name}</label>)}
                 <Link to="/family" onClick={onClose} className="text-brand-700 underline">Add or edit family members</Link>
-                <p>{physicalBundleQty} set(s) per selected person. Each set includes one keychain and one wallet card.</p>
+                <p>{physicalBundleQty} set(s) per selected person. Each set includes {formData.tagType === 'keychain' ? 'one keychain' : formData.tagType === 'wallet_card' ? 'one wallet card' : 'one keychain and one wallet card'}.</p>
                 <p className="font-semibold">{[...(includeSelf ? ['My own tag'] : []), ...members.filter(m => memberIds.includes(m.member_id)).map(m => `${m.first_name} ${m.last_name}`)].join(', ') || 'Choose your recipients above.'}</p>
               </fieldset>
               {/* Bundle quantity stepper */}
               {selectedPhysicalPackage && selectedPhysicalPackage.sets >= 1 && (
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <span className="font-bold text-slate-800 block text-xs">Bundle Quantity</span>
+                    <span className="font-bold text-slate-800 block text-xs">{isSinglePersonOrder ? 'Quantity' : 'Bundle Quantity'}</span>
                     <span className="text-[10px] text-slate-500 block">
-                      Each bundle adds one set for every selected person
+                      Each additional copy includes the selected items for every chosen person
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

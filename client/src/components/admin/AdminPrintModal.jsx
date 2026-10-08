@@ -56,7 +56,9 @@ export default function AdminPrintModal({ orderId, orderIds, onClose, onStatusUp
 
   // Physical package labels (display-only; keys match the server PHYSICAL_PACKAGES table).
   const PHYSICAL_PACKAGE_LABELS = {
-    physical_combo: 'Single Combo',
+    physical_keychain: 'Keychain Only',
+    physical_card: 'Wallet Card Only',
+    physical_combo: 'Keychain + Wallet Card',
     physical_family_3: 'Family of 3',
     physical_family_5: 'Family of 5',
     physical_family_10: 'Family of 10'
@@ -220,7 +222,7 @@ export default function AdminPrintModal({ orderId, orderIds, onClose, onStatusUp
                         </span>
                         <span className="text-[10px] font-mono text-slate-500 block">
                           {isPhysicalOrder(ordersData[0])
-                            ? 'Fixed sizes · Square Keychain (3×3 cm) + CR80 Card (8.56×5.4 cm)'
+                            ? (ordersData[0].tag_type === 'keychain' ? 'Square Keychain (3×3 cm)' : ordersData[0].tag_type === 'wallet_card' ? 'CR80 Card (8.56×5.4 cm)' : 'Fixed sizes · Square Keychain (3×3 cm) + CR80 Card (8.56×5.4 cm)')
                             : ordersData[0]?.selected_size === 'custom' && ordersData[0]?.custom_dimensions
                               ? `Custom: ${ordersData[0]?.custom_dimensions}`
                               : ordersData[0]?.selected_size || 'Standard Scale'}

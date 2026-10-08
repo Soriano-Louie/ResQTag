@@ -57,6 +57,8 @@ export function resolveDimensions(tagType, selectedSize, customDimensions) {
       case 'square_fob_30x30':
       case 'square_fob_35x35':
       // Physical combo packages always use the fixed 3.0 × 3.0 cm square keychain.
+      case 'physical_keychain':
+      case 'physical_card':
       case 'physical_combo':
       case 'physical_family_3':
       case 'physical_family_5':
@@ -74,6 +76,8 @@ export function resolveDimensions(tagType, selectedSize, customDimensions) {
         return { widthCm: 7.0, heightCm: 4.5, label: 'Compact Card (7.0 × 4.5 cm)', isCustom: false };
       case 'standard_cr80_card':
       // Physical combo packages always use the fixed CR80 wallet card.
+      case 'physical_keychain':
+      case 'physical_card':
       case 'physical_combo':
       case 'physical_family_3':
       case 'physical_family_5':

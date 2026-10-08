@@ -58,6 +58,8 @@ function formatTagSizeLabel(tagType, selectedSize, customDimensions) {
     return `Custom Dimensions (${customDimensions})`;
   }
   const sizeMap = {
+    physical_keychain: 'Square Keychain (3cm x 3cm)',
+    physical_card: 'Wallet Card (CR80: 8.56cm x 5.4cm)',
     standard: 'Standard Size',
     square_fob_30x30: 'Square Keychain Fob (3cm x 3cm)',
     square_fob_35x35: 'Square Keychain Fob (3.5cm x 3.5cm)',
@@ -100,7 +102,7 @@ export async function sendTagOrderEmail({
       const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
       const response = await client.transactionalEmails.sendTransacEmail({
         subject: `ResQTag order #${orderId} approved`,
-        htmlContent: `<h1>Your family tags are being prepared</h1><p>${escape(bundleQuantity)} bundle(s). Total: PHP ${escape(totalPeso)}.</p><ul>${recipients.map(p => `<li>${escape(p.first_name)} ${escape(p.last_name)}: ${escape(p.copies)} set(s), each with one keychain and one wallet card.</li>`).join('')}</ul><p>${paymentMethod === 'cod' ? 'Payment will be collected on delivery.' : 'Your payment has been verified.'}</p><p>Shipping address: ${escape(shippingAddress)}</p>`,
+        htmlContent: `<h1>Your tags are being prepared</h1><p>${escape(bundleQuantity)} bundle(s). Total: PHP ${escape(totalPeso)}.</p><ul>${recipients.map(p => `<li>${escape(p.first_name)} ${escape(p.last_name)}: ${escape(p.copies)} set(s), each with ${tagType === 'keychain' ? 'one keychain' : tagType === 'wallet_card' ? 'one wallet card' : 'one keychain and one wallet card'}.</li>`).join('')}</ul><p>${paymentMethod === 'cod' ? 'Payment will be collected on delivery.' : 'Your payment has been verified.'}</p><p>Shipping address: ${escape(shippingAddress)}</p>`,
         sender: { name: config.brevo.senderName, email: config.brevo.senderEmail },
         to: [{ email: recipientEmail, name: recipientName }]
       });

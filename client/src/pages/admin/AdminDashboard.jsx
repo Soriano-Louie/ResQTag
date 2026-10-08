@@ -304,13 +304,15 @@ export default function AdminDashboard() {
   // Physical combo package helpers (display-only; keys/prices match the order
   // modal and the server-validated PHYSICAL_PACKAGES table).
   const PHYSICAL_PACKAGE_LABELS = {
-    physical_combo: 'Single Combo',
+    physical_keychain: 'Keychain Only',
+    physical_card: 'Wallet Card Only',
+    physical_combo: 'Keychain + Wallet Card',
     physical_family_3: 'Family of 3',
     physical_family_5: 'Family of 5',
     physical_family_10: 'Family of 10'
   };
-  const PHYSICAL_PACKAGE_PRICES = { physical_combo: 100, physical_family_3: 210, physical_family_5: 350, physical_family_10: 700 };
-  const PHYSICAL_PACKAGE_SETS = { physical_combo: 1, physical_family_3: 3, physical_family_5: 5, physical_family_10: 10 };
+  const PHYSICAL_PACKAGE_PRICES = { physical_keychain: 30, physical_card: 50, physical_combo: 70, physical_family_3: 210, physical_family_5: 350, physical_family_10: 700 };
+  const PHYSICAL_PACKAGE_SETS = { physical_keychain: 1, physical_card: 1, physical_combo: 1, physical_family_3: 3, physical_family_5: 5, physical_family_10: 10 };
 
   const isPhysicalPackageOrder = (order) => !!(order?.selected_size && PHYSICAL_PACKAGE_LABELS[order.selected_size]);
 
@@ -322,7 +324,7 @@ export default function AdminDashboard() {
   };
 
   const formatOrderItemLabel = (order) => {
-    if (order.recipients?.length) return `${order.bundle_quantity} bundle(s) · ${order.quantity} sets · ${order.recipients.map(p => `${p.first_name} ${p.last_name} × ${p.copies}`).join(', ')}`;
+    if (order.recipients?.length) return `${order.quantity} ${order.tag_type === 'keychain' ? 'keychain(s)' : order.tag_type === 'wallet_card' ? 'wallet card(s)' : 'keychain + card set(s)'} · ${order.recipients.map(p => `${p.first_name} ${p.last_name} × ${p.copies}`).join(', ')}`;
     if (order.tag_type === 'keychain') return `${order.quantity}x Keychain`;
     if (order.tag_type === 'wallet_card') return `${order.quantity}x Wallet Card`;
     if (isPhysicalPackageOrder(order)) {
@@ -343,6 +345,8 @@ export default function AdminDashboard() {
       standard_cr80_card: 'Card (CR80: 8.56×5.4 cm)',
       compact_card_70x45: 'Compact Card (7×4.5 cm)',
       complete_bundle_all_sizes: 'Complete Bundle (All Sizes)',
+      physical_keychain: 'Keychain (3×3 cm)',
+      physical_card: 'Wallet Card (CR80: 8.56×5.4 cm)',
       physical_combo: 'Combo (Keychain + Card)',
       physical_family_3: 'Family of 3 Bundle',
       physical_family_5: 'Family of 5 Bundle',

@@ -142,6 +142,8 @@ export default function QRPage() {
       standard_cr80_card: 'Standard Wallet Card (CR80: 8.56×5.4 cm)',
       compact_card_70x45: 'Compact Card (7×4.5 cm)',
       complete_bundle_all_sizes: 'Complete Bundle (All Sizes)',
+      physical_keychain: 'Keychain (3×3 cm)',
+      physical_card: 'Wallet Card (CR80: 8.56×5.4 cm)',
       physical_combo: 'Combo · Keychain (3×3 cm) + Card (CR80)',
       physical_family_3: 'Family of 3 · Fixed Keychains + Cards',
       physical_family_5: 'Family of 5 · Fixed Keychains + Cards',
@@ -151,11 +153,13 @@ export default function QRPage() {
   };
 
   const formatOrderItem = (order) => {
-    if (order.recipients?.length) return `${order.bundle_quantity} bundle(s) · ${order.quantity} sets · ${order.recipients.map(p => `${p.first_name} ${p.last_name} × ${p.copies}`).join(', ')}`;
+    if (order.recipients?.length) return `${order.quantity} ${order.tag_type === 'keychain' ? 'keychain(s)' : order.tag_type === 'wallet_card' ? 'wallet card(s)' : 'keychain + card set(s)'} · ${order.recipients.map(p => `${p.first_name} ${p.last_name} × ${p.copies}`).join(', ')}`;
     if (order.tag_type === 'keychain') return `${order.quantity}x Keychain Tag`;
     if (order.tag_type === 'wallet_card') return `${order.quantity}x Wallet Card`;
     const pkgLabels = {
-      physical_combo: 'Single Combo',
+      physical_keychain: 'Keychain Only',
+      physical_card: 'Wallet Card Only',
+      physical_combo: 'Keychain + Wallet Card',
       physical_family_3: 'Family of 3',
       physical_family_5: 'Family of 5',
       physical_family_10: 'Family of 10'
