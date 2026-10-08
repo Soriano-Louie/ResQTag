@@ -703,3 +703,17 @@ export async function sendEmailChangeNotificationEmail({ previousEmail, newEmail
   }
 }
 
+
+/** Sends recovery codes only through the configured email service, never logs them. */
+export async function sendPasswordResetCodeEmail({ recipientEmail, code, expiresInMinutes }) {
+  const client = getBrevoClient();
+  if (!client) throw new Error('Brevo is not configured for password recovery.');
+  if (!/^\d{6}$/.test(code) || !Number.isInteger(expiresInMinutes)) throw new Error('Invalid reset email parameters.');
+  return client.transactionalEmails.sendTransacEmail({
+    sender: { name: config.brevo.senderName, email: config.brevo.senderEmail },
+    to: [{ email: recipientEmail }],
+    subject: 'Your ResQTag password reset code',
+    htmlContent: `<h1>Reset your ResQTag password</h1><p>Enter this verification code on the password reset page:</p><p style="font-size:32px;font-weight:bold;letter-spacing:6px">${code}</p><p>This code expires in ${expiresInMinutes} minutes. Your password stays unchanged until you verify this code and confirm a new password.</p><p>If you did not request this, ignore this email. Do not share this code with anyone.</p>`,
+    textContent: `Your ResQTag password reset code is ${code}. It expires in ${expiresInMinutes} minutes. Verify this code before choosing a new password. If you did not request this, ignore this email. Do not share this code with anyone.`
+  });
+}

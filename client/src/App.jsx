@@ -16,6 +16,7 @@ const DataLeakPolicy = lazy(() => import('./pages/public/DataLeakPolicy'));
 const Terms = lazy(() => import('./pages/public/Terms'));
 
 // Auth Pages
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 
@@ -53,6 +54,7 @@ export default function App() {
                 
                 {/* Auth Routes */}
                 <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/register" element={<Register />} />
 
                 <Route path="/family" element={<ProtectedRoute><FamilyPage /></ProtectedRoute>} />

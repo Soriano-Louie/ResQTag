@@ -1,4 +1,5 @@
 import express from 'express';
+import { requestPasswordReset, verifyPasswordReset, confirmPasswordReset } from '../controllers/passwordResetController.js';
 import {
   register,
   login,
@@ -12,12 +13,15 @@ import {
   cancelEmailChange
 } from '../controllers/authController.js';
 import { authenticate } from '../middleware/authMiddleware.js';
-import { authLimiter, emailChangeLimiter } from '../middleware/rateLimiter.js';
+import { authLimiter, emailChangeLimiter, passwordResetRequestLimiter, passwordResetEmailLimiter, passwordResetVerifyLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
 router.post('/register', authLimiter, register);
 router.post('/login', authLimiter, login);
+router.post('/password-reset/request', passwordResetRequestLimiter, passwordResetEmailLimiter, requestPasswordReset);
+router.post('/password-reset/verify', passwordResetVerifyLimiter, verifyPasswordReset);
+router.post('/password-reset/confirm', passwordResetVerifyLimiter, confirmPasswordReset);
 router.post('/logout', logout);
 router.get('/me', authenticate, getMe);
 router.put('/password', authenticate, updatePassword);

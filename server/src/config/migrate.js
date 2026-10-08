@@ -15,7 +15,8 @@ const REQUIRED_TABLES = [
   'privacy_settings',
   'qr_tags',
   'tag_orders',
-  'email_change_verifications'
+  'email_change_verifications',
+  'password_reset_verifications'
 ];
 
 export async function runMigrations() {
@@ -65,6 +66,25 @@ export async function runMigrations() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_user_email (email)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `));
+
+    await step('add users.session_version', async () => {
+      const [columns] = await connection.query("SHOW COLUMNS FROM users LIKE 'session_version'");
+      if (!columns.length) await connection.query('ALTER TABLE users ADD COLUMN session_version INT UNSIGNED NOT NULL DEFAULT 0');
+    });
+
+    await step('create password_reset_verifications table', () => connection.query(`
+      CREATE TABLE IF NOT EXISTS password_reset_verifications (
+        user_id INT NOT NULL PRIMARY KEY,
+        request_id CHAR(64) NOT NULL UNIQUE,
+        email VARCHAR(100) NOT NULL,
+        password_fingerprint CHAR(64) NOT NULL,
+        code_hash CHAR(64) NULL,
+        attempts INT NOT NULL DEFAULT 0,
+        expires_at DATETIME NOT NULL,
+        reset_token_hash CHAR(64) NULL,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `));
 

@@ -33,8 +33,8 @@ function getCookieOptions() {
   };
 }
 
-function generateToken(userId, role) {
-  return jwt.sign({ userId, role }, config.jwtSecret, {
+function generateToken(userId, role, sessionVersion = 0) {
+  return jwt.sign({ userId, role, sessionVersion }, config.jwtSecret, {
     expiresIn: config.jwtExpiresIn
   });
 }
@@ -152,7 +152,7 @@ export async function login(req, res) {
     const cleanEmail = sanitizeEmail(email, USER_EMAIL_MAX_LENGTH);
 
     const [rows] = await pool.query(
-      'SELECT user_id, first_name, middle_name, last_name, email, password_hash, role, account_status FROM users WHERE email = ?',
+      'SELECT user_id, first_name, middle_name, last_name, email, password_hash, role, account_status, session_version FROM users WHERE email = ?',
       [cleanEmail]
     );
 
@@ -171,7 +171,7 @@ export async function login(req, res) {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
-    const token = generateToken(user.user_id, user.role);
+    const token = generateToken(user.user_id, user.role, Number(user.session_version || 0));
     res.cookie(COOKIE_NAME, token, getCookieOptions());
 
     return res.json({

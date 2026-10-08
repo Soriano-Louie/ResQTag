@@ -18,7 +18,7 @@ export async function authenticate(req, res, next) {
     
     // Check if user still exists and is active
     const [rows] = await pool.query(
-      'SELECT user_id, first_name, middle_name, last_name, email, role, account_status FROM users WHERE user_id = ?',
+      'SELECT user_id, first_name, middle_name, last_name, email, role, account_status, session_version FROM users WHERE user_id = ?',
       [decoded.userId]
     );
 
@@ -30,6 +30,10 @@ export async function authenticate(req, res, next) {
 
     if (user.account_status !== 'active') {
       return res.status(403).json({ message: `Account is ${user.account_status}. Please contact support.` });
+    }
+
+    if (Number(decoded.sessionVersion || 0) !== Number(user.session_version || 0)) {
+      return res.status(401).json({ message: 'Your password was reset. Please log in again.' });
     }
 
     req.user = user;

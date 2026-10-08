@@ -101,7 +101,7 @@ test('family public photo requires explicit visibility and an active tag', async
 test('owner public photo stays private by default and can be shared then hidden', async t => {
   let shared = false, reads = 0;
   t.mock.method(pool, 'query', async sql => {
-    if (sql.includes('FROM qr_tags')) return [[{ qr_id: 1, user_id: 7, status: 'active' }]];
+    if (sql.includes('FROM qr_tags')) return [[{ qr_id: 1, user_id: 7, status: 'active', account_status: 'active' }]];
     if (sql.includes('FROM users')) return [[{ user_id: 7, account_status: 'active' }]];
     if (sql.includes('FROM privacy_settings')) return [shared ? [{ field_name: 'profile_picture', is_public: 1 }] : []];
     if (sql.includes('FROM profile_photos')) { reads++; return [[{ image: Buffer.from('photo') }]]; }

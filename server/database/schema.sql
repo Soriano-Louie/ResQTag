@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     last_name VARCHAR(50) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
+    session_version INT UNSIGNED NOT NULL DEFAULT 0,
     role ENUM('user', 'admin') DEFAULT 'user',
     account_status ENUM('active', 'suspended', 'deactivated') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -68,4 +69,17 @@ CREATE TABLE IF NOT EXISTS qr_tags (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     INDEX idx_qr_token (qr_token)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS password_reset_verifications (
+    user_id INT NOT NULL PRIMARY KEY,
+    request_id CHAR(64) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL,
+    password_fingerprint CHAR(64) NOT NULL,
+    code_hash CHAR(64) NULL,
+    attempts INT NOT NULL DEFAULT 0,
+    expires_at DATETIME NOT NULL,
+    reset_token_hash CHAR(64) NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

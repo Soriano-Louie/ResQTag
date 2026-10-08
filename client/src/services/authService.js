@@ -1,6 +1,18 @@
 import api from './api';
 
 export const authService = {
+  async requestPasswordReset(email) {
+    const res = await api.post('/auth/password-reset/request', { email });
+    return res.data;
+  },
+  async verifyPasswordReset(data) {
+    const res = await api.post('/auth/password-reset/verify', data);
+    return res.data;
+  },
+  async confirmPasswordReset(data) {
+    const res = await api.post('/auth/password-reset/confirm', data);
+    return res.data;
+  },
   async register(data) {
     const res = await api.post('/auth/register', data);
     return res.data;

@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import rateLimit from 'express-rate-limit';
 
 /**
@@ -85,4 +86,19 @@ export const emailChangeLimiter = rateLimit({
     status: 429,
     message: 'Too many email change attempts. Please wait 15 minutes before trying again.'
   }
+});
+
+// Separate recovery budgets avoid locking users out of login while resetting.
+export const passwordResetRequestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false,
+  message: { message: 'Too many reset requests. Please wait 15 minutes and try again.' }
+});
+export const passwordResetEmailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 3, standardHeaders: true, legacyHeaders: false,
+  keyGenerator: req => crypto.createHash('sha256').update(String(req.body?.email || '').trim().toLowerCase()).digest('hex'),
+  message: { message: 'Too many reset requests for this email. Please wait 15 minutes and try again.' }
+});
+export const passwordResetVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false,
+  message: { message: 'Too many reset attempts. Please wait 15 minutes and try again.' }
 });

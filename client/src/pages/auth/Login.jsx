@@ -84,6 +84,7 @@ export default function Login() {
                 <label className="block text-xs font-semibold text-slate-700">
                   Password
                 </label>
+                <Link to="/forgot-password" state={{ email }} className="text-xs font-semibold text-brand-600 hover:text-brand-700">Forgot password?</Link>
               </div>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
